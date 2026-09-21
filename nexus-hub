@@ -611,3 +611,677 @@ end
 -- ============================================================
 -- Part 2 continues with: Combat · Movement · Farming logic
 -- Part 3 continues with: Visuals · Utility · tab wiring
+-- ============================================================
+--  NEXUS HUB v1.2 — EXTENSION PACK
+--  Combat + Defense additions
+-- ============================================================
+
+-- ============ EXTENDED CONFIG ============
+Config.TriggerBot = false
+Config.TriggerBotRange = 500
+Config.TriggerBotDelay = 0.05
+
+Config.Aimlock2 = false
+Config.Aimlock2Key = Enum.KeyCode.LeftAlt
+
+Config.SilentAim2 = false
+
+Config.SkinChanger = false
+Config.SkinTargetId = ""
+
+Config.AntiLava = false
+Config.AntiStun = false
+Config.AntiChair = false
+Config.AntiRagdoll = false
+Config.AntiFling = false
+
+-- ============ EXTENDED STATE ============
+State.TriggerLast = 0
+State.AimlockHolding = false
+
+-- ============ TRIGGER BOT ============
+task.spawn(function()
+    while task.wait(0.02) do
+        if Config.TriggerBot and State.Character and State.Humanoid then
+            local mouse = lp:GetMouse()
+            if mouse and mouse.Target then
+                local model = mouse.Target.Parent
+                if model and model ~= State.Character then
+                    local hum = model:FindFirstChildOfClass("Humanoid")
+                    local hrp = model:FindFirstChild("HumanoidRootPart")
+                    if hum and hrp and hum.Health > 0 then
+                        local dist = (hrp.Position - State.Root.Position).Magnitude
+                        if dist <= Config.TriggerBotRange then
+                            local now = tick()
+                            if now - State.TriggerLast >= Config.TriggerBotDelay then
+                                State.TriggerLast = now
+                                local tool = State.Character:FindFirstChildOfClass("Tool")
+                                if tool then pcall(function() tool:Activate() end) end
+                                if mouse1click then pcall(mouse1click) end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- ============ AIMLOCK v2 ============
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if Config.Aimlock2 and input.KeyCode == Config.Aimlock2Key then
+        State.AimlockHolding = true
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Config.Aimlock2Key then
+        State.AimlockHolding = false
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if Config.Aimlock2 and State.AimlockHolding and State.Root then
+        local mouse = lp:GetMouse()
+        if mouse and mouse.Target then
+            local model = mouse.Target.Parent
+            if model and model ~= State.Character then
+                local part = model:FindFirstChild("Head")
+                if part then
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, part.Position)
+                end
+            end
+        end
+    end
+end)
+
+-- ============ SILENT AIM v2 ============
+if has.getrawmetatable and has.hookmetamethod and has.setreadonly then
+    local ok = pcall(function()
+        local mt = getrawmetatable(game)
+        if not mt then return end
+        local oldIndex = mt.__index
+        setreadonly(mt, false)
+        mt.__index = newcclosure(function(self, key)
+            if Config.SilentAim2 and (key == "Hit" or key == "Target") and self == lp:GetMouse() then
+                local best, bestDist = nil, 500
+                local center = camera.ViewportSize / 2
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= lp and p.Character then
+                        local part = p.Character:FindFirstChild("Head")
+                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                        if part and hum and hum.Health > 0 then
+                            local pos, onScreen = camera:WorldToViewportPoint(part.Position)
+                            if onScreen then
+                                local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                                if dist < bestDist then
+                                    bestDist = dist
+                                    best = part
+                                end
+                            end
+                        end
+                    end
+                end
+                if best then
+                    if key == "Hit" then return best.CFrame end
+                    if key == "Target" then return best end
+                end
+            end
+            return oldIndex(self, key)
+        end)
+        setreadonly(mt, true)
+    end)
+    if not ok then warn("[NEXUS] Silent Aim v2 hook failed") end
+end
+
+-- ============ SKIN CHANGER ============
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.SkinChanger and Config.SkinTargetId ~= "" and State.Character then
+            local targetId = tonumber(Config.SkinTargetId)
+            if targetId then
+                pcall(function()
+                    local hum = State.Character:FindFirstChildOfClass("Humanoid")
+                    if not hum then return end
+                    local desc = Players:GetHumanoidDescriptionFromUserId(targetId)
+                    if desc then hum:ApplyDescription(desc) end
+                end)
+            end
+            Config.SkinChanger = false
+        end
+    end
+end)
+
+-- ============ ANTI-LAVA ============
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.AntiLava then
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    local n = v.Name:lower()
+                    local p = v.Parent and v.Parent.Name:lower() or ""
+                    if (n:find("lava") or n:find("magma") or n:find("fire") or
+                        n:find("damage") or n:find("kill") or n:find("void") or
+                        p:find("damage") or p:find("lava")) then
+                        pcall(function()
+                            v.CanTouch = false
+                            v.Material = Enum.Material.Plastic
+                        end)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- ============ ANTI-STUN ============
+task.spawn(function()
+    while task.wait(0.1) do
+        if Config.AntiStun and State.Humanoid and State.Root then
+            pcall(function()
+                State.Humanoid.PlatformStand = false
+                State.Humanoid.Sit = false
+                State.Humanoid.WalkSpeed = math.max(State.Humanoid.WalkSpeed, 16)
+                if State.Root.Anchored then State.Root.Anchored = false end
+                State.Character:SetAttribute("Stun", 0)
+                State.Character:SetAttribute("Busy", false)
+                for _, v in ipairs(State.Root:GetChildren()) do
+                    if (v:IsA("BodyVelocity") or v:IsA("BodyGyro") or v:IsA("BodyPosition")) then
+                        if v.Name ~= "NEXUS_FlyBV" and v.Name ~= "NEXUS_FlyBG" then
+                            v:Destroy()
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- ============ ANTI-CHAIR ============
+task.spawn(function()
+    while task.wait(0.2) do
+        if Config.AntiChair and State.Humanoid then
+            pcall(function()
+                if State.Humanoid.SeatPart then
+                    State.Humanoid.Sit = false
+                    State.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+                else
+                    State.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+                end
+            end)
+        end
+    end
+end)
+
+-- ============ ANTI-RAGDOLL ============
+task.spawn(function()
+    while task.wait(0.2) do
+        if Config.AntiRagdoll and State.Humanoid then
+            pcall(function()
+                State.Humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
+                State.Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                if State.Humanoid.PlatformStand then State.Humanoid.PlatformStand = false end
+            end)
+        end
+    end
+end)
+
+-- ============ ANTI-FLING ============
+task.spawn(function()
+    while task.wait(0.1) do
+        if Config.AntiFling and State.Root then
+            if State.Root.AssemblyLinearVelocity.Magnitude > 500 then
+                State.Root.AssemblyLinearVelocity = Vector3.zero
+                State.Root.AssemblyAngularVelocity = Vector3.zero
+            end
+        end
+    end
+end)
+
+-- ============ UI: EXTENSION TAB ============
+local CombatPage = Pages.Combat
+
+sec(CombatPage, "Trigger Bot", 100)
+toggle(CombatPage, "Enable Trigger Bot", "TriggerBot", 101)
+slider(CombatPage, "Trigger Range", "TriggerBotRange", 50, 2000, 102)
+slider(CombatPage, "Trigger Delay", "TriggerBotDelay", 0.02, 0.5, 103)
+
+sec(CombatPage, "Aimlock v2", 104)
+toggle(CombatPage, "Enable Aimlock (hold Alt)", "Aimlock2", 105)
+
+sec(CombatPage, "Silent Aim v2", 106)
+toggle(CombatPage, "Enable Silent Aim v2", "SilentAim2", 107)
+
+sec(CombatPage, "Skin Changer", 108)
+input(CombatPage, "Target UserID", "SkinTargetId", 109, "123456")
+toggle(CombatPage, "Apply Skin (one-shot)", "SkinChanger", 110)
+
+sec(CombatPage, "Defense", 111)
+toggle(CombatPage, "Anti-Lava", "AntiLava", 112)
+toggle(CombatPage, "Anti-Stun", "AntiStun", 113)
+toggle(CombatPage, "Anti-Chair", "AntiChair", 114)
+toggle(CombatPage, "Anti-Ragdoll", "AntiRagdoll", 115)
+toggle(CombatPage, "Anti-Fling", "AntiFling", 116)
+
+print("[NEXUS v1.2] Part 1/3 — Combat + Defense extensions loaded")
+-- ============================================================
+--  NEXUS HUB v1.2 — Extension Pack (Part 2)
+--  Movement + Farming additions
+-- ============================================================
+
+-- ============ EXTENDED CONFIG ============
+Config.InfiniteFlashStep = false
+Config.AirFlashStep = false
+Config.AirFlashStepRange = 200
+Config.DashLength = false
+Config.DashLengthValue = 50
+
+Config.AutoRaceV3 = false
+Config.AutoAwakening = false
+Config.AutoGacha = false
+Config.MasteryFarm = false
+Config.EliteHunter = false
+
+-- ============ INFINITE FLASH STEP ============
+task.spawn(function()
+    while task.wait(0.1) do
+        if Config.InfiniteFlashStep and State.Character then
+            pcall(function()
+                State.Character:SetAttribute("FlashstepCooldown", 0)
+            end)
+        end
+    end
+end)
+
+-- ============ AIR FLASH STEP ============
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if Config.AirFlashStep and input.KeyCode == Enum.KeyCode.R and State.Root then
+        local mouse = lp:GetMouse()
+        local target = mouse.Hit.Position
+        local dir = (target - State.Root.Position)
+        local dist = dir.Magnitude
+        if dist > Config.AirFlashStepRange then
+            dir = dir.Unit * Config.AirFlashStepRange
+        end
+        State.Root.CFrame = CFrame.new(State.Root.Position + dir + Vector3.new(0, 3, 0))
+    end
+end)
+
+-- ============ DASH LENGTH ============
+task.spawn(function()
+    while task.wait(0.1) do
+        if Config.DashLength and State.Character then
+            pcall(function()
+                State.Character:SetAttribute("DashLength", Config.DashLengthValue)
+                State.Character:SetAttribute("DashLengthAir", Config.DashLengthValue)
+            end)
+        end
+    end
+end)
+
+-- ============ AUTO RACE V3 ============
+task.spawn(function()
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+    while task.wait(1) do
+        if Config.AutoRaceV3 then
+            pcall(function()
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.T, false, game)
+                task.wait(0.05)
+                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.T, false, game)
+            end)
+        end
+    end
+end)
+
+-- ============ AUTO AWAKENING ============
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.AutoAwakening then
+            pcall(function()
+                local bp = lp:FindFirstChild("Backpack")
+                if bp then
+                    local aw = bp:FindFirstChild("Awakening")
+                    if aw then
+                        local rf = aw:FindFirstChild("RemoteFunction")
+                        if rf then rf:InvokeServer(true) end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- ============ AUTO GACHA ============
+task.spawn(function()
+    while task.wait(2) do
+        if Config.AutoGacha and State.Root then
+            pcall(function()
+                local r = ReplicatedStorage:FindFirstChild("Remotes")
+                local c = r and r:FindFirstChild("CommF_")
+                if c then c:InvokeServer("Cousin", "Buy") end
+            end)
+        end
+    end
+end)
+
+-- ============ MASTERY FARM ============
+task.spawn(function()
+    local points = {
+        Vector3.new(45.54, 99.37, -12605.42),
+        Vector3.new(111.02, 100.24, -12933.88),
+        Vector3.new(724, 94.46, -12617.58),
+        Vector3.new(-13.85, 94.62, -12262.23),
+    }
+    local idx = 1
+    while task.wait(0.5) do
+        if Config.MasteryFarm and State.Root then
+            local target = points[idx]
+            State.Root.CFrame = CFrame.new(target)
+            local tool = State.Character and State.Character:FindFirstChildOfClass("Tool")
+            if tool then pcall(function() tool:Activate() end) end
+            idx = idx % #points + 1
+        end
+    end
+end)
+
+-- ============ ELITE HUNTER ============
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.EliteHunter and State.Root and State.Humanoid then
+            pcall(function()
+                local r = ReplicatedStorage:FindFirstChild("Remotes")
+                local c = r and r:FindFirstChild("CommF_")
+                if c then c:InvokeServer("EliteHunter") end
+                local en = Workspace:FindFirstChild("Enemies")
+                if en then
+                    for _, e in ipairs(en:GetChildren()) do
+                        if e:IsA("Model") then
+                            local name = e.Name
+                            if name == "Diablo" or name == "Deandre" or name == "Urban" then
+                                local hrp = e:FindFirstChild("HumanoidRootPart")
+                                if hrp then State.Root.CFrame = hrp.CFrame * CFrame.new(0, 25, 0) end
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- ============ UI: EXTENSION ADDITIONS ============
+local MovePage = Pages.Movement
+local FarmPage = Pages.Farming
+
+sec(MovePage, "Advanced FlashStep", 100)
+toggle(MovePage, "Infinite FlashStep", "InfiniteFlashStep", 101)
+toggle(MovePage, "Air FlashStep (R key)", "AirFlashStep", 102)
+slider(MovePage, "Air FlashStep Range", "AirFlashStepRange", 20, 500, 103)
+
+sec(MovePage, "Dash", 104)
+toggle(MovePage, "Enable Dash Length", "DashLength", 105)
+slider(MovePage, "Dash Distance", "DashLengthValue", 10, 200, 106)
+
+sec(FarmPage, "Auto Race V3", 100)
+toggle(FarmPage, "Auto Race V3 (spam T)", "AutoRaceV3", 101)
+
+sec(FarmPage, "Auto Awakening", 102)
+toggle(FarmPage, "Enable Auto Awakening", "AutoAwakening", 103)
+
+sec(FarmPage, "Auto Gacha", 104)
+toggle(FarmPage, "Enable Auto Gacha", "AutoGacha", 105)
+
+sec(FarmPage, "Mastery Farm", 106)
+toggle(FarmPage, "Enable Mastery Farm", "MasteryFarm", 107)
+
+sec(FarmPage, "Elite Hunter", 108)
+toggle(FarmPage, "Enable Elite Hunter", "EliteHunter", 109)
+
+print("[NEXUS v1.2] Part 2/3 — Movement + Farming extensions loaded")
+-- ============================================================
+--  NEXUS HUB v1.2 — Extension Pack (Part 3)
+--  Visuals + Utility additions
+-- ============================================================
+
+-- ============ EXTENDED CONFIG ============
+Config.PotatoGraphics = false
+Config.ShowFPS = false
+Config.ShowPing = false
+Config.ShowUptime = false
+Config.ShowServer = false
+Config.FOVValue = 70
+Config.CustomCursorId = ""
+Config.ToolColorChanger = false
+Config.ToolColor = Color3.fromRGB(255, 255, 255)
+Config.EmoteID = ""
+Config.FakeLag = false
+Config.PanicMode = false
+Config.PanicKey = Enum.KeyCode.P
+Config.Desync = false
+Config.DesyncRange = 20
+
+-- ============ EXTENDED STATE ============
+State.ServerGui = nil
+State.CursorApplied = false
+
+-- ============ POTATO GRAPHICS ============
+task.spawn(function()
+    local saved = {}
+    while task.wait(0.5) do
+        if Config.PotatoGraphics then
+            for _, v in ipairs(Lighting:GetChildren()) do
+                if v:IsA("PostEffect") or v:IsA("Atmosphere") then
+                    if not saved[v] then saved[v] = v.Enabled end
+                    v.Enabled = false
+                end
+            end
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 100000
+        else
+            for v, state in pairs(saved) do
+                if v and v.Parent then v.Enabled = state end
+            end
+            saved = {}
+            Lighting.GlobalShadows = true
+        end
+    end
+end)
+
+-- ============ SERVER STATS HUD ============
+task.spawn(function()
+    if State.ServerGui then State.ServerGui:Destroy() end
+    State.ServerGui = Instance.new("ScreenGui")
+    State.ServerGui.Name = "NEXUS_ServerStats"
+    State.ServerGui.ResetOnSpawn = false
+    pcall(function() State.ServerGui.Parent = parent end)
+    if not State.ServerGui.Parent then State.ServerGui.Parent = lp:WaitForChild("PlayerGui") end
+
+    local frame = Instance.new("Frame", State.ServerGui)
+    frame.Size = UDim2.new(0, 200, 0, 90)
+    frame.Position = UDim2.new(0, 20, 0, 60)
+    frame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+    frame.BackgroundTransparency = 0.3
+    frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(1, -12, 1, -12)
+    lbl.Position = UDim2.new(0, 6, 0, 6)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = Config.Theme
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Top
+
+    while task.wait(0.5) do
+        if Config.ShowFPS or Config.ShowPing or Config.ShowUptime or Config.ShowServer then
+            frame.Visible = true
+            local lines = {}
+            if Config.ShowFPS then
+                lines[#lines+1] = ("FPS: %d"):format(math.floor(1 / RunService.RenderStepped:Wait()))
+            end
+            if Config.ShowPing then
+                local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+                lines[#lines+1] = ("Ping: %d ms"):format(ping)
+            end
+            if Config.ShowUptime then
+                local t = Workspace.DistributedGameTime
+                lines[#lines+1] = ("Uptime: %02d:%02d:%02d"):format(
+                    math.floor(t/3600), math.floor((t%3600)/60), math.floor(t%60))
+            end
+            if Config.ShowServer then
+                lines[#lines+1] = ("Server: %s"):format(game.JobId:sub(1, 8))
+            end
+            lbl.Text = table.concat(lines, "\n")
+        else
+            frame.Visible = false
+        end
+    end
+end)
+
+-- ============ FOV CHANGER ============
+task.spawn(function()
+    while task.wait(0.5) do
+        if camera and camera.FieldOfView ~= Config.FOVValue then
+            camera.FieldOfView = Config.FOVValue
+        end
+    end
+end)
+
+-- ============ CUSTOM CURSOR ============
+task.spawn(function()
+    while task.wait(1) do
+        if Config.CustomCursorId ~= "" and not State.CursorApplied then
+            pcall(function()
+                local mouse = lp:GetMouse()
+                if tonumber(Config.CustomCursorId) then
+                    mouse.Icon = "rbxassetid://" .. Config.CustomCursorId
+                else
+                    mouse.Icon = Config.CustomCursorId
+                end
+                State.CursorApplied = true
+            end)
+        elseif Config.CustomCursorId == "" and State.CursorApplied then
+            pcall(function() lp:GetMouse().Icon = "" end)
+            State.CursorApplied = false
+        end
+    end
+end)
+
+-- ============ TOOL COLOR CHANGER ============
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.ToolColorChanger and State.Character then
+            for _, v in ipairs(State.Character:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    local parent = v.Parent
+                    if parent and parent:IsA("Tool") then
+                        if not v:GetAttribute("NEXUS_OrigColor") then
+                            v:SetAttribute("NEXUS_OrigColor", v.Color)
+                        end
+                        v.Color = Config.ToolColor
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- ============ EMOTE PLAYER ============
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.EmoteID ~= "" and State.Humanoid then
+            pcall(function()
+                local anim = Instance.new("Animation")
+                anim.AnimationId = "rbxassetid://" .. Config.EmoteID
+                local track = State.Humanoid:LoadAnimation(anim)
+                track:Play()
+                task.wait(3)
+                track:Stop()
+            end)
+            Config.EmoteID = ""
+        end
+    end
+end)
+
+-- ============ FAKE LAG ============
+task.spawn(function()
+    while task.wait(0.05) do
+        if Config.FakeLag and State.Root then
+            local orig = State.Root.CFrame
+            State.Root.Anchored = true
+            task.wait(0.2)
+            if State.Root then
+                State.Root.Anchored = false
+                State.Root.CFrame = orig
+            end
+        end
+    end
+end)
+
+-- ============ PANIC MODE ============
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if Config.PanicMode and input.KeyCode == Config.PanicKey then
+        if State.Root and State.Humanoid then
+            State.Humanoid.PlatformStand = true
+            for i = 1, 50 do
+                State.Root.CFrame = State.Root.CFrame + Vector3.new(0, 500, 0)
+                task.wait(0.02)
+            end
+        end
+    end
+end)
+
+-- ============ DESYNC ============
+task.spawn(function()
+    while task.wait(0.05) do
+        if Config.Desync and State.Root then
+            local offset = Vector3.new(
+                math.random(-Config.DesyncRange, Config.DesyncRange),
+                0,
+                math.random(-Config.DesyncRange, Config.DesyncRange)
+            )
+            State.Root.CFrame = State.Root.CFrame + offset
+        end
+    end
+end)
+
+-- ============ UI: EXTENSION ADDITIONS ============
+local VisPage = Pages.Visuals
+local UtilPage = Pages.Utility
+
+sec(VisPage, "Graphics", 100)
+toggle(VisPage, "Potato Graphics (FPS boost)", "PotatoGraphics", 101)
+slider(VisPage, "Field of View", "FOVValue", 20, 120, 102)
+
+sec(VisPage, "HUD", 103)
+toggle(VisPage, "Show FPS", "ShowFPS", 104)
+toggle(VisPage, "Show Ping", "ShowPing", 105)
+toggle(VisPage, "Show Uptime", "ShowUptime", 106)
+toggle(VisPage, "Show Server", "ShowServer", 107)
+
+sec(VisPage, "Cursor", 108)
+input(VisPage, "Custom Cursor ID", "CustomCursorId", 109, "assetid")
+
+sec(VisPage, "Tool Color", 110)
+toggle(VisPage, "Enable Tool Color", "ToolColorChanger", 111)
+
+sec(VisPage, "Emote", 112)
+input(VisPage, "Emote ID", "EmoteID", 113, "assetid")
+
+sec(UtilPage, "Fake Lag", 100)
+toggle(UtilPage, "Enable Fake Lag", "FakeLag", 101)
+
+sec(UtilPage, "Panic Mode", 102)
+toggle(UtilPage, "Enable Panic Mode", "PanicMode", 103)
+
+sec(UtilPage, "Desync", 104)
+toggle(UtilPage, "Enable Desync", "Desync", 105)
+slider(UtilPage, "Desync Range", "DesyncRange", 5, 100, 106)
+
+print("[NEXUS v1.2] Part 3/3 — Visuals + Utility extensions loaded")
+print("[NEXUS v1.2] Total: 25+ features active")
