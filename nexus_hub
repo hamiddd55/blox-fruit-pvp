@@ -2108,6 +2108,485 @@ task.spawn(function()
     end
 end)
 
+--  VISUALS BACKEND
+-- ============================================================
+
+-- Snow
+local function makeSnow()
+    if State.SnowGui then State.SnowGui:Destroy() end
+    State.SnowGui = Instance.new("ScreenGui")
+    State.SnowGui.Name = "NEXUS_Snow"
+    State.SnowGui.IgnoreGuiInset = true
+    State.SnowGui.DisplayOrder = -1
+    pcall(function() State.SnowGui.Parent = parent end)
+    if not State.SnowGui.Parent then State.SnowGui.Parent = lp:WaitForChild("PlayerGui") end
+    local flakes = {}
+    for i = 1, 80 do
+        local f = Instance.new("Frame", State.SnowGui)
+        f.Size = UDim2.new(0, math.random(8, 15), 0, math.random(8, 15))
+        f.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        f.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        f.BackgroundTransparency = math.random(30, 60) / 100
+        f.BorderSizePixel = 0
+        Instance.new("UICorner", f).CornerRadius = UDim.new(0.5, 0)
+        flakes[#flakes+1] = {f=f, x=math.random()*100, y=math.random()*100, sp=math.random()*3+2}
+    end
+    State.SnowConn = RunService.RenderStepped:Connect(function()
+        if not State.SnowGui or not State.SnowGui.Parent then return end
+        for _, fl in ipairs(flakes) do
+            fl.y = fl.y + fl.sp / 100
+            if fl.y > 105 then fl.y = -5; fl.x = math.random() * 100 end
+            fl.f.Position = UDim2.new(fl.x / 100, 0, fl.y / 100, 0)
+        end
+    end)
+end
+
+local function removeSnow()
+    if State.SnowConn then State.SnowConn:Disconnect(); State.SnowConn = nil end
+    if State.SnowGui then State.SnowGui:Destroy(); State.SnowGui = nil end
+end
+
+-- Rain
+local function makeRain()
+    if State.RainPart then State.RainPart:Destroy() end
+    if State.RainConn then State.RainConn:Disconnect(); State.RainConn = nil end
+    State.RainPart = Instance.new("Part")
+    State.RainPart.Name = "NEXUS_Rain"
+    State.RainPart.Size = Vector3.new(51.8, 0.001, 52)
+    State.RainPart.CanCollide = false
+    State.RainPart.Anchored = true
+    State.RainPart.Transparency = 1
+    State.RainPart.Parent = Workspace
+    local e = Instance.new("ParticleEmitter", State.RainPart)
+    e.Color = ColorSequence.new(Color3.fromRGB(200, 220, 255))
+    e.LightEmission = 1
+    e.Orientation = Enum.ParticleOrientation.FacingCameraWorldUp
+    e.Size = NumberSequence.new(0.4)
+    e.Squash = NumberSequence.new(4)
+    e.Texture = "rbxassetid://129110349"
+    e.EmissionDirection = Enum.NormalId.Bottom
+    e.Lifetime = NumberRange.new(5)
+    e.Rate = 1000
+    e.Speed = NumberRange.new(100)
+    e.LockedToPart = true
+    State.RainConn = RunService.Heartbeat:Connect(function()
+        if State.RainPart then
+            State.RainPart.CFrame = CFrame.new(camera.CFrame.Position + Vector3.new(0, 30, 0))
+        end
+    end)
+end
+
+local function removeRain()
+    if State.RainConn then State.RainConn:Disconnect(); State.RainConn = nil end
+    if State.RainPart then State.RainPart:Destroy(); State.RainPart = nil end
+end
+
+-- Trail
+function makeTrail()
+    if not State.Character then return end
+    local root = State.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    if root:FindFirstChild("NEXUS_Trail") then return end
+    local a0 = Instance.new("Attachment", root)
+    a0.Position = Vector3.new(0, 1, 0)
+    local a1 = Instance.new("Attachment", root)
+    a1.Position = Vector3.new(0, -1, 0)
+    local t = Instance.new("Trail", root)
+    t.Name = "NEXUS_Trail"
+    t.Attachment0 = a0
+    t.Attachment1 = a1
+    t.Color = ColorSequence.new(Config.TrailColor)
+    t.Lifetime = 1.6
+    t.LightEmission = 0.2
+    t.Brightness = 10
+    t.WidthScale = NumberSequence.new{NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 0)}
+end
+
+-- Watchers
+task.spawn(function()
+    while task.wait(0.3) do
+        if Config.Snow and not State.SnowGui then makeSnow()
+        elseif not Config.Snow and State.SnowGui then removeSnow() end
+        if Config.Rain and not State.RainPart then makeRain()
+        elseif not Config.Rain and State.RainPart then removeRain() end
+        if Config.Trail and State.Character then
+            local root = State.Character:FindFirstChild("HumanoidRootPart")
+            if root and not root:FindFirstChild("NEXUS_Trail") then makeTrail() end
+        elseif not Config.Trail and State.Character then
+            local root = State.Character:FindFirstChild("HumanoidRootPart")
+            if root and root:FindFirstChild("NEXUS_Trail") then root.NEXUS_Trail:Destroy() end
+        end
+    end
+end)
+
+-- Skybox Cleanup
+task.spawn(function()
+    local savedSky = nil
+    while task.wait(0.5) do
+        if Config.RemoveSkybox then
+            local sky = Lighting:FindFirstChildOfClass("Sky")
+            if sky and sky.Name ~= "NEXUS_Empty" then
+                savedSky = sky
+                sky.Parent = nil
+            end
+            if not Lighting:FindFirstChild("NEXUS_Empty") then
+                local s = Instance.new("Sky")
+                s.Name = "NEXUS_Empty"
+                s.SkyboxBk = "rbxasset://textures/sky/sky512_bk.tex"
+                s.SkyboxDn = "rbxasset://textures/sky/sky512_dn.tex"
+                s.SkyboxFt = "rbxasset://textures/sky/sky512_ft.tex"
+                s.SkyboxLf = "rbxasset://textures/sky/sky512_lf.tex"
+                s.SkyboxRt = "rbxasset://textures/sky/sky512_rt.tex"
+                s.SkyboxUp = "rbxasset://textures/sky/sky512_up.tex"
+                s.Parent = Lighting
+            end
+        else
+            local s = Lighting:FindFirstChild("NEXUS_Empty")
+            if s then s:Destroy() end
+            if savedSky and not savedSky.Parent then savedSky.Parent = Lighting; savedSky = nil end
+        end
+    end
+end)
+
+-- Fullbright
+task.spawn(function()
+    local origAmbient, origOutdoor, origBrightness
+    while task.wait(0.5) do
+        if Config.Fullbright then
+            if not origAmbient then
+                origAmbient = Lighting.Ambient
+                origOutdoor = Lighting.OutdoorAmbient
+                origBrightness = Lighting.Brightness
+            end
+            Lighting.Ambient = Color3.fromRGB(255,255,255)
+            Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255)
+            Lighting.Brightness = 3
+        elseif origAmbient then
+            Lighting.Ambient = origAmbient
+            Lighting.OutdoorAmbient = origOutdoor
+            Lighting.Brightness = origBrightness
+            origAmbient = nil
+        end
+    end
+end)
+
+-- No Fog
+task.spawn(function()
+    local origFogEnd, origFogStart
+    while task.wait(0.5) do
+        if Config.NoFog then
+            if not origFogEnd then
+                origFogEnd = Lighting.FogEnd
+                origFogStart = Lighting.FogStart
+            end
+            Lighting.FogEnd = 9e9
+            Lighting.FogStart = 9e9
+        elseif origFogEnd then
+            Lighting.FogEnd = origFogEnd
+            Lighting.FogStart = origFogStart
+            origFogEnd = nil
+        end
+    end
+end)
+
+-- Potato Graphics
+task.spawn(function()
+    local saved = {}
+    while task.wait(0.5) do
+        if Config.PotatoGraphics then
+            for _, v in ipairs(Lighting:GetChildren()) do
+                if v:IsA("PostEffect") or v:IsA("Atmosphere") then
+                    if not saved[v] then saved[v] = v.Enabled end
+                    v.Enabled = false
+                end
+            end
+            Lighting.GlobalShadows = false
+            Lighting.FogEnd = 100000
+        else
+            for v, state in pairs(saved) do
+                if v and v.Parent then v.Enabled = state end
+            end
+            saved = {}
+            Lighting.GlobalShadows = true
+        end
+    end
+end)
+
+-- FOV Changer
+task.spawn(function()
+    while task.wait(0.5) do
+        if camera and camera.FieldOfView ~= Config.FOVValue then
+            camera.FieldOfView = Config.FOVValue
+        end
+    end
+end)
+
+-- Hit Effects + Damage Numbers
+task.spawn(function()
+    while task.wait(0.2) do
+        if (Config.HitEffects or Config.DamageNumbers) and State.Character then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= lp and p.Character then
+                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                    local head = p.Character:FindFirstChild("Head")
+                    local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                    if hum and hrp then
+                        local last = State.LastDamage[p]
+                        if last and hum.Health < last and head then
+                            local diff = math.floor(last - hum.Health)
+                            if Config.HitEffects then
+                                local att = Instance.new("Attachment", hrp)
+                                local e = Instance.new("ParticleEmitter", att)
+                                e.Texture = "rbxassetid://4509687978"
+                                e.Color = ColorSequence.new(Config.HitEffectsColor)
+                                e.Rate = 0
+                                e.Lifetime = NumberRange.new(0.5)
+                                e.Speed = NumberRange.new(20, 30)
+                                e.Size = NumberSequence.new(1)
+                                e.SpreadAngle = Vector2.new(360, 360)
+                                e:Emit(15)
+                                task.delay(1, function() att:Destroy() end)
+                            end
+                            if Config.DamageNumbers then
+                                local gui = Instance.new("BillboardGui")
+                                gui.Size = UDim2.new(0, 100, 0, 40)
+                                gui.StudsOffset = Vector3.new(0, 2, 0)
+                                gui.AlwaysOnTop = true
+                                gui.Parent = head
+                                local lbl = Instance.new("TextLabel", gui)
+                                lbl.Size = UDim2.new(1, 0, 1, 0)
+                                lbl.BackgroundTransparency = 1
+                                lbl.Text = "-" .. diff
+                                lbl.TextColor3 = Color3.fromRGB(255, 80, 80)
+                                lbl.TextStrokeTransparency = 0
+                                lbl.Font = Enum.Font.GothamBold
+                                lbl.TextSize = 20
+                                task.delay(1, function() gui:Destroy() end)
+                            end
+                        end
+                        State.LastDamage[p] = hum.Health
+                    end
+                end
+            end
+        end
+    end
+end)
+
+print("[NEXUS v1.3] Part 3/4 loaded — movement + farming + visuals active")
+
+-- ============================================================
+--  UTILITY BACKEND
+-- ============================================================
+
+-- Anti-Void
+task.spawn(function()
+    local orig = Workspace.FallenPartsDestroyHeight
+    while task.wait(0.5) do
+        if Config.AntiVoid then
+            Workspace.FallenPartsDestroyHeight = -math.huge
+        elseif Workspace.FallenPartsDestroyHeight == -math.huge then
+            Workspace.FallenPartsDestroyHeight = orig
+        end
+    end
+end)
+
+-- FPS Unlocker
+task.spawn(function()
+    while task.wait(1) do
+        if Config.FPSUnlocker then
+            pcall(function() if has.setfpscap then setfpscap(9999) end end)
+        end
+    end
+end)
+
+-- Anti-AFK
+lp.Idled:Connect(function()
+    if Config.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
+-- Server Info HUD
+task.spawn(function()
+    if State.ServerGui then State.ServerGui:Destroy() end
+    State.ServerGui = Instance.new("ScreenGui")
+    State.ServerGui.Name = "NEXUS_ServerInfo"
+    State.ServerGui.ResetOnSpawn = false
+    pcall(function() State.ServerGui.Parent = parent end)
+    if not State.ServerGui.Parent then State.ServerGui.Parent = lp:WaitForChild("PlayerGui") end
+
+    local lbl = Instance.new("TextLabel", State.ServerGui)
+    lbl.Size = UDim2.new(0, 240, 0, 60)
+    lbl.Position = UDim2.new(1, -260, 0, 60)
+    lbl.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+    lbl.BackgroundTransparency = 0.2
+    lbl.BorderSizePixel = 0
+    lbl.TextColor3 = Config.Theme
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 10
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Top
+    Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 8)
+
+    while task.wait(1) do
+        if Config.ServerInfo then
+            lbl.Visible = true
+            local players = #Players:GetPlayers()
+            local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            local job = game.JobId:sub(1, 8) .. "..."
+            lbl.Text = ("Server Info\nPlayers: %d | Ping: %d ms\nJob: %s"):format(players, ping, job)
+        else
+            lbl.Visible = false
+        end
+    end
+end)
+
+-- HUD (FPS/Ping/Uptime/Server)
+task.spawn(function()
+    local hudGui = Instance.new("ScreenGui")
+    hudGui.Name = "NEXUS_HUD"
+    hudGui.ResetOnSpawn = false
+    pcall(function() hudGui.Parent = parent end)
+    if not hudGui.Parent then hudGui.Parent = lp:WaitForChild("PlayerGui") end
+
+    local frame = Instance.new("Frame", hudGui)
+    frame.Size = UDim2.new(0, 200, 0, 90)
+    frame.Position = UDim2.new(0, 20, 0, 60)
+    frame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+    frame.BackgroundTransparency = 0.3
+    frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(1, -12, 1, -12)
+    lbl.Position = UDim2.new(0, 6, 0, 6)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = Config.Theme
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Top
+
+    local fpsCounter, fpsTime = 0, tick()
+    RunService.RenderStepped:Connect(function()
+        fpsCounter += 1
+        if tick() - fpsTime >= 1 then
+            frame:SetAttribute("FPS", fpsCounter)
+            fpsCounter = 0
+            fpsTime = tick()
+        end
+    end)
+
+    while task.wait(0.5) do
+        if Config.ShowFPS or Config.ShowPing or Config.ShowUptime or Config.ShowServer then
+            frame.Visible = true
+            local lines = {}
+            if Config.ShowFPS then lines[#lines+1] = ("FPS: %d"):format(frame:GetAttribute("FPS") or 0) end
+            if Config.ShowPing then lines[#lines+1] = ("Ping: %d ms"):format(math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())) end
+            if Config.ShowUptime then
+                local t = Workspace.DistributedGameTime
+                lines[#lines+1] = ("Uptime: %02d:%02d:%02d"):format(math.floor(t/3600), math.floor((t%3600)/60), math.floor(t%60))
+            end
+            if Config.ShowServer then lines[#lines+1] = ("Server: %s"):format(game.JobId:sub(1, 8)) end
+            lbl.Text = table.concat(lines, "\n")
+        else
+            frame.Visible = false
+        end
+    end
+end)
+
+-- Custom Cursor
+task.spawn(function()
+    while task.wait(1) do
+        if Config.CustomCursorId ~= "" and not State.CursorApplied then
+            pcall(function()
+                local m = lp:GetMouse()
+                if tonumber(Config.CustomCursorId) then m.Icon = "rbxassetid://" .. Config.CustomCursorId
+                else m.Icon = Config.CustomCursorId end
+                State.CursorApplied = true
+            end)
+        elseif Config.CustomCursorId == "" and State.CursorApplied then
+            pcall(function() lp:GetMouse().Icon = "" end)
+            State.CursorApplied = false
+        end
+    end
+end)
+
+-- Tool Color
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.ToolColorChanger and State.Character then
+            for _, v in ipairs(State.Character:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    local p = v.Parent
+                    if p and p:IsA("Tool") then
+                        if not v:GetAttribute("NEXUS_OrigColor") then v:SetAttribute("NEXUS_OrigColor", v.Color) end
+                        v.Color = Config.ToolColor
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Emote
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.EmoteID ~= "" and State.Humanoid then
+            pcall(function()
+                local anim = Instance.new("Animation")
+                anim.AnimationId = "rbxassetid://" .. Config.EmoteID
+                local track = State.Humanoid:LoadAnimation(anim)
+                track:Play()
+                task.wait(3)
+                track:Stop()
+            end)
+            Config.EmoteID = ""
+        end
+    end
+end)
+
+-- Fake Lag
+task.spawn(function()
+    while task.wait(0.05) do
+        if Config.FakeLag and State.Root then
+            local orig = State.Root.CFrame
+            State.Root.Anchored = true
+            task.wait(0.2)
+            if State.Root then State.Root.Anchored = false; State.Root.CFrame = orig end
+        end
+    end
+end)
+
+-- Panic Mode
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if Config.PanicMode and input.KeyCode == Config.PanicKey then
+        if State.Root and State.Humanoid then
+            State.Humanoid.PlatformStand = true
+            for i = 1, 50 do
+                if State.Root then State.Root.CFrame = State.Root.CFrame + Vector3.new(0, 500, 0) end
+                task.wait(0.02)
+            end
+        end
+    end
+end)
+
+-- Desync
+task.spawn(function()
+    while task.wait(0.05) do
+        if Config.Desync and State.Root then
+            local offset = Vector3.new(
+                math.random(-Config.DesyncRange, Config.DesyncRange), 0,
+                math.random(-Config.DesyncRange, Config.DesyncRange))
+            State.Root.CFrame = State.Root.CFrame + offset
+        end
+    end
+end)
+
+print("[NEXUS v1.3] Part 4/4 loaded — utility + HUD active")
+print("[NEXUS v1.3] Full build ready — ~50 features")
 -- ============================================================
 --  STARTUP
 -- ============================================================
