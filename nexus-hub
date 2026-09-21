@@ -1,46 +1,33 @@
 --[[
     ███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗
-    ████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝
-    ██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗
-    ██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║
-    ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║
-    ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝
-    
-    NEXUS HUB v1.0 — full build
-    
-    Features:
-      Combat   · Fast Attack · Hitbox Expander · ESP
-      Movement · Speed · Jump · Fly · Noclip · InfJump
-      Farming  · Legendary Sword · Fruit M1 · Auto Collect · Auto Store
-      Visuals  · Snow · Rain · Trail · Skybox Cleanup
-      Utility  · Anti-Void · FPS Unlocker · Copy JobID · Server Hop · Rejoin
-    
-    No key system. No anti-cheat bypass. No external servers.
-    Client-side only. Yours to keep, edit, and extend.
-    
-    _Built once. Kept forever._
+  --[[
+    NEXUS HUB v1.3 — full build
+    Combat · Movement · Farming · Visuals · Utility
+    Client-side only. No key system. No anti-cheat bypass.
 --]]
 
 -- ============================================================
---  SERVICES
+--  1. SERVICES
 -- ============================================================
-local Players            = game:GetService("Players")
-local RunService         = game:GetService("RunService")
-local UserInputService   = game:GetService("UserInputService")
-local TweenService       = game:GetService("TweenService")
-local CoreGui            = game:GetService("CoreGui")
-local ReplicatedStorage  = game:GetService("ReplicatedStorage")
-local HttpService        = game:GetService("HttpService")
-local Lighting           = game:GetService("Lighting")
-local TeleportService    = game:GetService("TeleportService")
-local Stats              = game:GetService("Stats")
-local Workspace          = game:GetService("Workspace")
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+local TweenService      = game:GetService("TweenService")
+local CoreGui           = game:GetService("CoreGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService       = game:GetService("HttpService")
+local Lighting          = game:GetService("Lighting")
+local TeleportService   = game:GetService("TeleportService")
+local Stats             = game:GetService("Stats")
+local Workspace         = game:GetService("Workspace")
+local VirtualUser       = game:GetService("VirtualUser")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local lp     = Players.LocalPlayer
 local camera = Workspace.CurrentCamera
 
 -- ============================================================
---  COMPATIBILITY
+--  2. COMPATIBILITY
 -- ============================================================
 local has = {
     hookmetamethod    = typeof(hookmetamethod)    == "function",
@@ -55,81 +42,76 @@ local has = {
 }
 
 -- ============================================================
---  CONFIG
+--  3. CONFIG
 -- ============================================================
 local Config = {
-    -- Theme
-    Theme   = Color3.fromRGB(0, 255, 150),
-    Accent  = Color3.fromRGB(255, 60, 90),
+    Theme  = Color3.fromRGB(0, 255, 150),
+    Accent = Color3.fromRGB(255, 60, 90),
 
-    -- Combat
-    FastAttack       = false,
-    FastAttackRange  = 120,
-    FastAttackTick   = 3,
-    Hitbox           = false,
-    HitboxSize       = 5,
-    HitboxMode       = "All",
-    HitboxTarget     = "",
-    ESPPlayers       = false,
-    ESPFruits        = false,
-    ESPNPCs          = false,
+    FastAttack=false, FastAttackRange=120, FastAttackTick=3,
+    Hitbox=false, HitboxSize=5, HitboxMode="All", HitboxTarget="",
+    ESPPlayers=false, ESPFruits=false, ESPNPCs=false,
+    KillAura=false, KillAuraRange=150, KillAuraPlayer=true, KillAuraNPC=true, KillAuraDelay=0.15,
+    SilentAim=false, SilentAimFOV=100, SilentAimPart="Head", SilentAimShowFOV=false, SilentAimTeamCheck=false,
+    SilentAim2=false,
+    AutoDodge=false, AutoDodgeRange=30, AutoDodgeMode="Random",
+    WeaponCycle=false, WeaponCycleDelay=0.3,
+    CooldownIndicator=false, DamageNumbers=false, HitEffects=false,
+    HitEffectsColor=Color3.fromRGB(0, 255, 150),
+    TriggerBot=false, TriggerBotRange=500, TriggerBotDelay=0.05,
+    Aimlock2=false, Aimlock2Key=Enum.KeyCode.LeftAlt,
+    SkinChanger=false, SkinTargetId="",
+    AntiLava=false, AntiStun=false, AntiChair=false, AntiRagdoll=false, AntiFling=false,
 
-    -- Movement
-    SpeedEnabled = false,
-    Speed        = 16,
-    JumpEnabled  = false,
-    Jump         = 50,
-    Fly          = false,
-    FlySpeed     = 80,
-    Noclip       = false,
-    InfJump      = false,
+    SpeedEnabled=false, Speed=16, JumpEnabled=false, Jump=50,
+    Fly=false, FlySpeed=80, Noclip=false, InfJump=false,
+    FlashStep=false, FlashStepRange=200, AutoFarmWalk=false,
+    BunnyHop=false, SpinBot=false, SpinBotSpeed=300,
+    InfiniteFlashStep=false, AirFlashStep=false, AirFlashStepRange=200,
+    DashLength=false, DashLengthValue=50,
 
-    -- Farming
-    LegendarySword   = false,
-    FruitM1          = false,
-    FruitM1Delay     = 0.25,
-    AutoCollectFruit = false,
-    AutoStoreFruit   = false,
+    LegendarySword=false, FruitM1=false, FruitM1Delay=0.25,
+    AutoCollectFruit=false, AutoStoreFruit=false,
+    AutoQuest=false, AutoBoss=false, ChestFarm=false, AutoRaid=false,
+    AutoRaceV3=false, AutoAwakening=false, AutoGacha=false,
+    MasteryFarm=false, EliteHunter=false,
 
-    -- Visuals
-    Snow       = false,
-    Rain       = false,
-    Trail      = false,
-    TrailColor = Color3.fromRGB(0, 255, 150),
+    Snow=false, Rain=false, Trail=false, TrailColor=Color3.fromRGB(0, 255, 150),
+    RemoveSkybox=false, Fullbright=false, NoFog=false,
+    PotatoGraphics=false,
+    ShowFPS=false, ShowPing=false, ShowUptime=false, ShowServer=false,
+    FOVValue=70, CustomCursorId="", ToolColorChanger=false,
+    ToolColor=Color3.fromRGB(255, 255, 255), EmoteID="",
 
-    -- Utility
-    AntiVoid     = false,
-    FPSUnlocker  = false,
+    AntiVoid=false, FPSUnlocker=false, AutoRejoin=false, AntiAFK=false, ServerInfo=false,
+    FakeLag=false, PanicMode=false, PanicKey=Enum.KeyCode.P,
+    Desync=false, DesyncRange=20,
 }
 getgenv().NEXUS = Config
 
 -- ============================================================
---  STATE
+--  4. STATE
 -- ============================================================
 local State = {
-    Character      = nil,
-    Root           = nil,
-    Humanoid       = nil,
-    ESPFolder      = nil,
-    FlyBV          = nil,
-    FlyBG          = nil,
-    HitboxOriginals = setmetatable({}, { __mode = "k" }),
-    FruitRemote    = nil,
-    NetCache       = nil,
-    SnowGui        = nil,
-    SnowConn       = nil,
-    RainPart       = nil,
-    RainConn       = nil,
-    TrailInst      = nil,
+    Character=nil, Root=nil, Humanoid=nil, ESPFolder=nil,
+    FlyBV=nil, FlyBG=nil, FruitRemote=nil, NetCache=nil,
+    SnowGui=nil, SnowConn=nil, RainPart=nil, RainConn=nil,
+    TrailAttachments=nil,
+    HitboxOriginals=setmetatable({}, {__mode="k"}),
+    SilentAimCircle=nil, CooldownGui=nil,
+    KillAuraLast=setmetatable({}, {__mode="k"}),
+    WeaponCycleLast=0, LastDamage={},
+    TriggerLast=0, AimlockHolding=false,
+    ServerGui=nil, CursorApplied=false,
 }
 
 -- ============================================================
---  CHARACTER BIND
+--  5. CHARACTER BIND
 -- ============================================================
-local function onCharacter(char)
-    State.Character = char
-    State.Root      = char:WaitForChild("HumanoidRootPart", 10)
-    State.Humanoid  = char:WaitForChild("Humanoid", 10)
+local function onCharacter(c)
+    State.Character = c
+    State.Root = c:WaitForChild("HumanoidRootPart", 10)
+    State.Humanoid = c:WaitForChild("Humanoid", 10)
     if State.Root then
         State.FlyBV = State.Root:FindFirstChild("NEXUS_FlyBV")
         State.FlyBG = State.Root:FindFirstChild("NEXUS_FlyBG")
@@ -139,454 +121,261 @@ if lp.Character then onCharacter(lp.Character) end
 lp.CharacterAdded:Connect(onCharacter)
 
 -- ============================================================
---  GUI PARENT
+--  6. UI
 -- ============================================================
-local function makeGui()
-    local parent = has.gethui and gethui() or CoreGui
-    local sg = Instance.new("ScreenGui")
-    sg.Name            = "NEXUS_HUB"
-    sg.ResetOnSpawn    = false
-    sg.IgnoreGuiInset  = true
-    sg.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
-    pcall(function() sg.Parent = parent end)
-    if not sg.Parent then sg.Parent = lp:WaitForChild("PlayerGui") end
-    return sg
-end
+local parent = has.gethui and gethui() or CoreGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NEXUS_HUB"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+pcall(function() ScreenGui.Parent = parent end)
+if not ScreenGui.Parent then ScreenGui.Parent = lp:WaitForChild("PlayerGui") end
 
-local ScreenGui = makeGui()
-
--- ============================================================
---  WATERMARK
--- ============================================================
 local watermark = Instance.new("Frame", ScreenGui)
-watermark.Size                = UDim2.new(0, 260, 0, 26)
-watermark.Position            = UDim2.new(1, -280, 0, 20)
-watermark.BackgroundColor3    = Color3.fromRGB(12, 12, 16)
+watermark.Size = UDim2.new(0, 260, 0, 26)
+watermark.Position = UDim2.new(1, -280, 0, 20)
+watermark.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 watermark.BackgroundTransparency = 0.1
-watermark.BorderSizePixel     = 0
+watermark.BorderSizePixel = 0
 Instance.new("UICorner", watermark).CornerRadius = UDim.new(0, 8)
-
-local wmStroke = Instance.new("UIStroke", watermark)
-wmStroke.Color        = Config.Theme
-wmStroke.Thickness    = 1
-wmStroke.Transparency = 0.4
-
-local wmLabel = Instance.new("TextLabel", watermark)
-wmLabel.Size              = UDim2.new(1, -12, 1, 0)
-wmLabel.Position          = UDim2.new(0, 8, 0, 0)
-wmLabel.BackgroundTransparency = 1
-wmLabel.Text              = "NEXUS HUB v1.0"
-wmLabel.TextColor3        = Config.Theme
-wmLabel.Font              = Enum.Font.GothamBold
-wmLabel.TextSize          = 11
-wmLabel.TextXAlignment    = Enum.TextXAlignment.Left
-
+local wmS = Instance.new("UIStroke", watermark)
+wmS.Color, wmS.Thickness, wmS.Transparency = Config.Theme, 1, 0.4
+local wmL = Instance.new("TextLabel", watermark)
+wmL.Size, wmL.Position = UDim2.new(1,-12,1,0), UDim2.new(0,8,0,0)
+wmL.BackgroundTransparency, wmL.Text = 1, "NEXUS HUB v1.3"
+wmL.TextColor3, wmL.Font, wmL.TextSize = Config.Theme, Enum.Font.GothamBold, 11
+wmL.TextXAlignment = Enum.TextXAlignment.Left
 task.spawn(function()
     while watermark.Parent do
         local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-        wmLabel.Text = ("NEXUS HUB · %d ms"):format(ping)
+        wmL.Text = ("NEXUS HUB v1.3 · %d ms"):format(ping)
         task.wait(0.5)
     end
 end)
 
--- ============================================================
---  MAIN PANEL
--- ============================================================
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size                = UDim2.new(0, 460, 0, 520)
-Main.Position            = UDim2.new(0.5, -230, 0.5, -260)
-Main.BackgroundColor3    = Color3.fromRGB(12, 12, 16)
+Main.Size = UDim2.new(0, 460, 0, 520)
+Main.Position = UDim2.new(0.5, -230, 0.5, -260)
+Main.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
 Main.BackgroundTransparency = 0.05
-Main.BorderSizePixel     = 0
-Main.Active              = true
-Main.Draggable           = true
-Main.ClipsDescendants    = true
+Main.BorderSizePixel = 0
+Main.Active, Main.Draggable, Main.ClipsDescendants = true, true, true
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 14)
-
-local mainStroke = Instance.new("UIStroke", Main)
-mainStroke.Color        = Config.Theme
-mainStroke.Thickness    = 1.5
-mainStroke.Transparency = 0.4
-
--- breathing animation
+local mS = Instance.new("UIStroke", Main)
+mS.Color, mS.Thickness, mS.Transparency = Config.Theme, 1.5, 0.4
 task.spawn(function()
     while Main.Parent do
-        TweenService:Create(mainStroke, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Transparency = 0.05, Thickness = 2}):Play()
+        TweenService:Create(mS, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {Transparency=0.05, Thickness=2}):Play()
         task.wait(1.5)
-        TweenService:Create(mainStroke, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-            {Transparency = 0.5, Thickness = 1.5}):Play()
+        TweenService:Create(mS, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {Transparency=0.5, Thickness=1.5}):Play()
         task.wait(1.5)
     end
 end)
 
--- ============================================================
---  HEADER
--- ============================================================
 local Header = Instance.new("Frame", Main)
-Header.Size              = UDim2.new(1, 0, 0, 48)
-Header.BackgroundColor3  = Color3.fromRGB(16, 16, 22)
-Header.BorderSizePixel   = 0
-
-local headerFix = Instance.new("Frame", Header)
-headerFix.Size              = UDim2.new(1, 0, 0, 12)
-headerFix.Position          = UDim2.new(0, 0, 1, -12)
-headerFix.BackgroundColor3  = Header.BackgroundColor3
-headerFix.BorderSizePixel   = 0
+Header.Size = UDim2.new(1,0,0,48)
+Header.BackgroundColor3 = Color3.fromRGB(16,16,22)
+Header.BorderSizePixel = 0
+local hFix = Instance.new("Frame", Header)
+hFix.Size, hFix.Position, hFix.BackgroundColor3, hFix.BorderSizePixel =
+    UDim2.new(1,0,0,12), UDim2.new(0,0,1,-12), Header.BackgroundColor3, 0
 
 local Title = Instance.new("TextLabel", Header)
-Title.Size              = UDim2.new(1, -80, 0, 20)
-Title.Position          = UDim2.new(0, 16, 0, 6)
-Title.BackgroundTransparency = 1
-Title.Text              = "NEXUS HUB"
-Title.TextColor3        = Color3.fromRGB(230, 230, 240)
-Title.Font              = Enum.Font.GothamBold
-Title.TextSize          = 14
-Title.TextXAlignment    = Enum.TextXAlignment.Left
+Title.Size, Title.Position = UDim2.new(1,-80,0,20), UDim2.new(0,16,0,6)
+Title.BackgroundTransparency, Title.Text = 1, "NEXUS HUB"
+Title.TextColor3, Title.Font, Title.TextSize = Color3.fromRGB(230,230,240), Enum.Font.GothamBold, 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
 
 local Subtitle = Instance.new("TextLabel", Header)
-Subtitle.Size              = UDim2.new(1, -80, 0, 12)
-Subtitle.Position          = UDim2.new(0, 16, 1, -18)
-Subtitle.BackgroundTransparency = 1
-Subtitle.Text              = "clean build · v1.0"
-Subtitle.TextColor3        = Config.Theme
-Subtitle.TextTransparency  = 0.3
-Subtitle.Font              = Enum.Font.Gotham
-Subtitle.TextSize          = 9
-Subtitle.TextXAlignment    = Enum.TextXAlignment.Left
+Subtitle.Size, Subtitle.Position = UDim2.new(1,-80,0,12), UDim2.new(0,16,1,-18)
+Subtitle.BackgroundTransparency, Subtitle.Text = 1, "full build · v1.3"
+Subtitle.TextColor3, Subtitle.TextTransparency, Subtitle.Font, Subtitle.TextSize = Config.Theme, 0.3, Enum.Font.Gotham, 9
+Subtitle.TextXAlignment = Enum.TextXAlignment.Left
 
 local dot = Instance.new("Frame", Header)
-dot.Size              = UDim2.new(0, 6, 0, 6)
-dot.Position          = UDim2.new(1, -22, 0.5, -3)
-dot.BackgroundColor3  = Config.Theme
-dot.BorderSizePixel   = 0
-Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+dot.Size, dot.Position, dot.BackgroundColor3, dot.BorderSizePixel =
+    UDim2.new(0,6,0,6), UDim2.new(1,-22,0.5,-3), Config.Theme, 0
+Instance.new("UICorner", dot).CornerRadius = UDim.new(1,0)
 
--- Close button
 local CloseBtn = Instance.new("TextButton", Header)
-CloseBtn.Size              = UDim2.new(0, 26, 0, 26)
-CloseBtn.Position          = UDim2.new(1, -34, 0.5, -13)
-CloseBtn.BackgroundColor3  = Color3.fromRGB(28, 28, 36)
-CloseBtn.Text              = "×"
-CloseBtn.TextColor3        = Color3.fromRGB(200, 200, 210)
-CloseBtn.Font              = Enum.Font.GothamBold
-CloseBtn.TextSize          = 16
-Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+CloseBtn.Size, CloseBtn.Position = UDim2.new(0,26,0,26), UDim2.new(1,-34,0.5,-13)
+CloseBtn.BackgroundColor3, CloseBtn.Text, CloseBtn.TextColor3 = Color3.fromRGB(28,28,36), "×", Color3.fromRGB(200,200,210)
+CloseBtn.Font, CloseBtn.TextSize = Enum.Font.GothamBold, 16
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0,6)
 CloseBtn.MouseEnter:Connect(function()
-    TweenService:Create(CloseBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(180, 40, 60)}):Play()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.2), {BackgroundColor3=Color3.fromRGB(180,40,60)}):Play()
 end)
 CloseBtn.MouseLeave:Connect(function()
-    TweenService:Create(CloseBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(28, 28, 36)}):Play()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.2), {BackgroundColor3=Color3.fromRGB(28,28,36)}):Play()
 end)
 CloseBtn.MouseButton1Click:Connect(function()
     TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
-        {Size = UDim2.new(0, 0, 0, 0)}):Play()
+        {Size=UDim2.new(0,0,0,0)}):Play()
     task.wait(0.35)
     ScreenGui:Destroy()
 end)
 
--- ============================================================
---  TAB BAR
--- ============================================================
 local TabBar = Instance.new("Frame", Main)
-TabBar.Size              = UDim2.new(1, -24, 0, 32)
-TabBar.Position          = UDim2.new(0, 12, 0, 56)
-TabBar.BackgroundColor3  = Color3.fromRGB(18, 18, 24)
-TabBar.BorderSizePixel   = 0
-Instance.new("UICorner", TabBar).CornerRadius = UDim.new(0, 8)
-
+TabBar.Size, TabBar.Position = UDim2.new(1,-24,0,32), UDim2.new(0,12,0,56)
+TabBar.BackgroundColor3, TabBar.BorderSizePixel = Color3.fromRGB(18,18,24), 0
+Instance.new("UICorner", TabBar).CornerRadius = UDim.new(0,8)
 local TabLayout = Instance.new("UIListLayout", TabBar)
-TabLayout.FillDirection       = Enum.FillDirection.Horizontal
-TabLayout.Padding             = UDim.new(0, 4)
-TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-TabLayout.VerticalAlignment   = Enum.VerticalAlignment.Center
+TabLayout.FillDirection, TabLayout.Padding = Enum.FillDirection.Horizontal, UDim.new(0,4)
+TabLayout.HorizontalAlignment, TabLayout.VerticalAlignment = Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center
 
--- ============================================================
---  PAGE CONTAINER
--- ============================================================
 local PageContainer = Instance.new("Frame", Main)
-PageContainer.Size              = UDim2.new(1, -24, 1, -148)
-PageContainer.Position          = UDim2.new(0, 12, 0, 96)
+PageContainer.Size, PageContainer.Position = UDim2.new(1,-24,1,-148), UDim2.new(0,12,0,96)
 PageContainer.BackgroundTransparency = 1
 
-local Pages = {}
-local TabButtons = {}
+local Pages, TabButtons = {}, {}
 
-local function makePage(name)
-    local page = Instance.new("ScrollingFrame", PageContainer)
-    page.Name                = name
-    page.Size                = UDim2.new(1, 0, 1, 0)
-    page.BackgroundTransparency = 1
-    page.BorderSizePixel     = 0
-    page.ScrollBarThickness  = 3
-    page.ScrollBarImageColor3 = Config.Theme
-    page.CanvasSize          = UDim2.new(0, 0, 0, 0)
-    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    page.Visible             = false
-    local layout = Instance.new("UIListLayout", page)
-    layout.Padding           = UDim.new(0, 6)
-    layout.SortOrder         = Enum.SortOrder.LayoutOrder
-    local pad = Instance.new("UIPadding", page)
-    pad.PaddingRight         = UDim.new(0, 6)
-    pad.PaddingBottom        = UDim.new(0, 12)
-    return page
+local function makePage(n)
+    local p = Instance.new("ScrollingFrame", PageContainer)
+    p.Name, p.Size, p.BackgroundTransparency, p.BorderSizePixel = n, UDim2.new(1,0,1,0), 1, 0
+    p.ScrollBarThickness, p.ScrollBarImageColor3 = 3, Config.Theme
+    p.CanvasSize, p.AutomaticCanvasSize = UDim2.new(0,0,0,0), Enum.AutomaticSize.Y
+    p.Visible = false
+    local l = Instance.new("UIListLayout", p)
+    l.Padding, l.SortOrder = UDim.new(0,6), Enum.SortOrder.LayoutOrder
+    local u = Instance.new("UIPadding", p)
+    u.PaddingRight, u.PaddingBottom = UDim.new(0,6), UDim.new(0,12)
+    return p
 end
 
-local function makeTab(name, order)
-    local btn = Instance.new("TextButton", TabBar)
-    btn.Size              = UDim2.new(0, 0, 0, 24)
-    btn.AutomaticSize     = Enum.AutomaticSize.X
-    btn.BackgroundColor3  = Color3.fromRGB(28, 28, 36)
-    btn.Text              = name
-    btn.TextColor3        = Color3.fromRGB(180, 180, 190)
-    btn.Font              = Enum.Font.GothamBold
-    btn.TextSize          = 10
-    btn.LayoutOrder       = order
-    local pad = Instance.new("UIPadding", btn)
-    pad.PaddingLeft       = UDim.new(0, 10)
-    pad.PaddingRight      = UDim.new(0, 10)
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-
-    local page = makePage(name)
-    Pages[name]      = page
-    TabButtons[name] = btn
-
-    btn.MouseButton1Click:Connect(function()
-        for n, p in pairs(Pages) do p.Visible = (n == name) end
-        for n, b in pairs(TabButtons) do
-            if n == name then
-                TweenService:Create(b, TweenInfo.new(0.2), {
-                    BackgroundColor3 = Config.Theme,
-                    TextColor3       = Color3.fromRGB(10, 10, 15),
-                }):Play()
+local function makeTab(n, o)
+    local b = Instance.new("TextButton", TabBar)
+    b.Size, b.AutomaticSize = UDim2.new(0,0,0,24), Enum.AutomaticSize.X
+    b.BackgroundColor3, b.Text, b.TextColor3 = Color3.fromRGB(28,28,36), n, Color3.fromRGB(180,180,190)
+    b.Font, b.TextSize, b.LayoutOrder = Enum.Font.GothamBold, 10, o
+    local p = Instance.new("UIPadding", b)
+    p.PaddingLeft, p.PaddingRight = UDim.new(0,10), UDim.new(0,10)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+    local pg = makePage(n)
+    Pages[n], TabButtons[n] = pg, b
+    b.MouseButton1Click:Connect(function()
+        for nn, pp in pairs(Pages) do pp.Visible = (nn == n) end
+        for nn, bb in pairs(TabButtons) do
+            if nn == n then
+                TweenService:Create(bb, TweenInfo.new(0.2), {BackgroundColor3=Config.Theme, TextColor3=Color3.fromRGB(10,10,15)}):Play()
             else
-                TweenService:Create(b, TweenInfo.new(0.2), {
-                    BackgroundColor3 = Color3.fromRGB(28, 28, 36),
-                    TextColor3       = Color3.fromRGB(180, 180, 190),
-                }):Play()
+                TweenService:Create(bb, TweenInfo.new(0.2), {BackgroundColor3=Color3.fromRGB(28,28,36), TextColor3=Color3.fromRGB(180,180,190)}):Play()
             end
         end
     end)
-    return btn
 end
 
--- ============================================================
---  UI COMPONENTS
--- ============================================================
-
--- section label
-local function section(parent, text, order)
-    local l = Instance.new("TextLabel", parent)
-    l.Size              = UDim2.new(1, 0, 0, 16)
-    l.BackgroundTransparency = 1
-    l.Text              = text:upper()
-    l.TextColor3        = Config.Theme
-    l.TextTransparency  = 0.2
-    l.Font              = Enum.Font.GothamBold
-    l.TextSize          = 8
-    l.TextXAlignment    = Enum.TextXAlignment.Left
-    l.LayoutOrder       = order
-    return l
+local function sec(par, t, o)
+    local l = Instance.new("TextLabel", par)
+    l.Size, l.BackgroundTransparency, l.Text = UDim2.new(1,0,0,16), 1, t:upper()
+    l.TextColor3, l.TextTransparency, l.Font, l.TextSize = Config.Theme, 0.2, Enum.Font.GothamBold, 8
+    l.TextXAlignment, l.LayoutOrder = Enum.TextXAlignment.Left, o
 end
 
--- toggle row
-local function toggle(parent, label, key, order)
-    local row = Instance.new("Frame", parent)
-    row.Size              = UDim2.new(1, 0, 0, 32)
-    row.BackgroundColor3  = Color3.fromRGB(18, 18, 24)
-    row.BorderSizePixel   = 0
-    row.LayoutOrder       = order
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-
-    local lbl = Instance.new("TextLabel", row)
-    lbl.Size              = UDim2.new(1, -70, 1, 0)
-    lbl.Position          = UDim2.new(0, 12, 0, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text              = label
-    lbl.TextColor3        = Color3.fromRGB(210, 210, 220)
-    lbl.Font              = Enum.Font.Gotham
-    lbl.TextSize          = 11
-    lbl.TextXAlignment    = Enum.TextXAlignment.Left
-
-    local sw = Instance.new("Frame", row)
-    sw.Size              = UDim2.new(0, 40, 0, 20)
-    sw.Position          = UDim2.new(1, -52, 0.5, -10)
-    sw.BackgroundColor3  = Color3.fromRGB(35, 35, 44)
-    sw.BorderSizePixel   = 0
-    Instance.new("UICorner", sw).CornerRadius = UDim.new(1, 0)
-
-    local knob = Instance.new("Frame", sw)
-    knob.Size              = UDim2.new(0, 14, 0, 14)
-    knob.Position          = UDim2.new(0, 3, 0.5, -7)
-    knob.BackgroundColor3  = Color3.fromRGB(200, 200, 210)
-    knob.BorderSizePixel   = 0
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-
-    local btn = Instance.new("TextButton", row)
-    btn.Size              = UDim2.new(1, 0, 1, 0)
-    btn.BackgroundTransparency = 1
-    btn.Text              = ""
-    btn.ZIndex            = 3
-
+local function toggle(par, lbl, key, o)
+    local r = Instance.new("Frame", par)
+    r.Size, r.BackgroundColor3, r.BorderSizePixel, r.LayoutOrder = UDim2.new(1,0,0,32), Color3.fromRGB(18,18,24), 0, o
+    Instance.new("UICorner", r).CornerRadius = UDim.new(0,8)
+    local l = Instance.new("TextLabel", r)
+    l.Size, l.Position, l.BackgroundTransparency = UDim2.new(1,-70,1,0), UDim2.new(0,12,0,0), 1
+    l.Text, l.TextColor3, l.Font, l.TextSize = lbl, Color3.fromRGB(210,210,220), Enum.Font.Gotham, 11
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    local sw = Instance.new("Frame", r)
+    sw.Size, sw.Position, sw.BackgroundColor3, sw.BorderSizePixel = UDim2.new(0,40,0,20), UDim2.new(1,-52,0.5,-10), Color3.fromRGB(35,35,44), 0
+    Instance.new("UICorner", sw).CornerRadius = UDim.new(1,0)
+    local k = Instance.new("Frame", sw)
+    k.Size, k.Position, k.BackgroundColor3, k.BorderSizePixel = UDim2.new(0,14,0,14), UDim2.new(0,3,0.5,-7), Color3.fromRGB(200,200,210), 0
+    Instance.new("UICorner", k).CornerRadius = UDim.new(1,0)
+    local b = Instance.new("TextButton", r)
+    b.Size, b.BackgroundTransparency, b.Text, b.ZIndex = UDim2.new(1,0,1,0), 1, "", 3
     local function refresh()
         if Config[key] then
-            TweenService:Create(sw, TweenInfo.new(0.2), {BackgroundColor3 = Config.Theme}):Play()
-            TweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -17, 0.5, -7)}):Play()
+            TweenService:Create(sw, TweenInfo.new(0.2), {BackgroundColor3=Config.Theme}):Play()
+            TweenService:Create(k, TweenInfo.new(0.2), {Position=UDim2.new(1,-17,0.5,-7)}):Play()
         else
-            TweenService:Create(sw, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 44)}):Play()
-            TweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(0, 3, 0.5, -7)}):Play()
+            TweenService:Create(sw, TweenInfo.new(0.2), {BackgroundColor3=Color3.fromRGB(35,35,44)}):Play()
+            TweenService:Create(k, TweenInfo.new(0.2), {Position=UDim2.new(0,3,0.5,-7)}):Play()
         end
     end
-    btn.MouseButton1Click:Connect(function()
-        Config[key] = not Config[key]
-        refresh()
-    end)
+    b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; refresh() end)
     refresh()
-    return row
 end
 
--- slider row
-local function slider(parent, label, key, min, max, order)
-    local row = Instance.new("Frame", parent)
-    row.Size              = UDim2.new(1, 0, 0, 46)
-    row.BackgroundColor3  = Color3.fromRGB(18, 18, 24)
-    row.BorderSizePixel   = 0
-    row.LayoutOrder       = order
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-
-    local lbl = Instance.new("TextLabel", row)
-    lbl.Size              = UDim2.new(1, -20, 0, 16)
-    lbl.Position          = UDim2.new(0, 12, 0, 4)
-    lbl.BackgroundTransparency = 1
-    lbl.Text              = label
-    lbl.TextColor3        = Color3.fromRGB(210, 210, 220)
-    lbl.Font              = Enum.Font.GothamBold
-    lbl.TextSize          = 10
-    lbl.TextXAlignment    = Enum.TextXAlignment.Left
-
-    local val = Instance.new("TextLabel", row)
-    val.Size              = UDim2.new(1, -20, 0, 16)
-    val.Position          = UDim2.new(0, 12, 0, 4)
-    val.BackgroundTransparency = 1
-    val.Text              = tostring(Config[key])
-    val.TextColor3        = Config.Theme
-    val.Font              = Enum.Font.GothamBold
-    val.TextSize          = 10
-    val.TextXAlignment    = Enum.TextXAlignment.Right
-
-    local bg = Instance.new("Frame", row)
-    bg.Size              = UDim2.new(1, -24, 0, 4)
-    bg.Position          = UDim2.new(0, 12, 1, -16)
-    bg.BackgroundColor3  = Color3.fromRGB(35, 35, 44)
-    bg.BorderSizePixel   = 0
-    Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
-
-    local fill = Instance.new("Frame", bg)
-    fill.Size              = UDim2.new(0, 0, 1, 0)
-    fill.BackgroundColor3  = Config.Theme
-    fill.BorderSizePixel   = 0
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
-
-    local knob = Instance.new("Frame", bg)
-    knob.Size              = UDim2.new(0, 12, 0, 12)
-    knob.Position          = UDim2.new(0, -6, 0.5, -6)
-    knob.BackgroundColor3  = Color3.fromRGB(255, 255, 255)
-    knob.BorderSizePixel   = 0
-    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
-
-    local function setV(v)
-        v = math.clamp(v, min, max)
-        Config[key] = v
-        local pct = (v - min) / (max - min)
-        fill.Size    = UDim2.new(pct, 0, 1, 0)
-        knob.Position = UDim2.new(pct, -6, 0.5, -6)
-        val.Text      = tostring(math.floor(v * 100) / 100)
+local function slider(par, lbl, key, mn, mx, o)
+    local r = Instance.new("Frame", par)
+    r.Size, r.BackgroundColor3, r.BorderSizePixel, r.LayoutOrder = UDim2.new(1,0,0,46), Color3.fromRGB(18,18,24), 0, o
+    Instance.new("UICorner", r).CornerRadius = UDim.new(0,8)
+    local l = Instance.new("TextLabel", r)
+    l.Size, l.Position, l.BackgroundTransparency = UDim2.new(1,-20,0,16), UDim2.new(0,12,0,4), 1
+    l.Text, l.TextColor3, l.Font, l.TextSize = lbl, Color3.fromRGB(210,210,220), Enum.Font.GothamBold, 10
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    local v = Instance.new("TextLabel", r)
+    v.Size, v.Position, v.BackgroundTransparency = UDim2.new(1,-20,0,16), UDim2.new(0,12,0,4), 1
+    v.Text, v.TextColor3, v.Font, v.TextSize = tostring(Config[key]), Config.Theme, Enum.Font.GothamBold, 10
+    v.TextXAlignment = Enum.TextXAlignment.Right
+    local bg = Instance.new("Frame", r)
+    bg.Size, bg.Position, bg.BackgroundColor3, bg.BorderSizePixel = UDim2.new(1,-24,0,4), UDim2.new(0,12,1,-16), Color3.fromRGB(35,35,44), 0
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(1,0)
+    local f = Instance.new("Frame", bg)
+    f.Size, f.BackgroundColor3, f.BorderSizePixel = UDim2.new(0,0,1,0), Config.Theme, 0
+    Instance.new("UICorner", f).CornerRadius = UDim.new(1,0)
+    local kn = Instance.new("Frame", bg)
+    kn.Size, kn.Position, kn.BackgroundColor3, kn.BorderSizePixel = UDim2.new(0,12,0,12), UDim2.new(0,-6,0.5,-6), Color3.fromRGB(255,255,255), 0
+    Instance.new("UICorner", kn).CornerRadius = UDim.new(1,0)
+    local function setV(val)
+        val = math.clamp(val, mn, mx)
+        Config[key] = val
+        local pct = (val - mn) / (mx - mn)
+        f.Size = UDim2.new(pct, 0, 1, 0)
+        kn.Position = UDim2.new(pct, -6, 0.5, -6)
+        v.Text = tostring(math.floor(val * 100) / 100)
     end
     setV(Config[key])
-
-    local dragging = false
-    local function fromInput(input)
-        local rel = (input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X
-        setV(min + math.clamp(rel, 0, 1) * (max - min))
+    local drag = false
+    local function fromInput(i)
+        local rel = (i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X
+        setV(mn + math.clamp(rel, 0, 1) * (mx - mn))
     end
-    bg.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-           or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            fromInput(input)
+    bg.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            drag = true; fromInput(i)
         end
     end)
-    knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-           or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-        end
+    kn.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = true end
     end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-                      or input.UserInputType == Enum.UserInputType.Touch) then
-            fromInput(input)
-        end
+    UserInputService.InputChanged:Connect(function(i)
+        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then fromInput(i) end
     end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-           or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = false end
     end)
-    return row
 end
 
--- text input row
-local function input(parent, label, key, order, placeholder)
-    local row = Instance.new("Frame", parent)
-    row.Size              = UDim2.new(1, 0, 0, 40)
-    row.BackgroundColor3  = Color3.fromRGB(18, 18, 24)
-    row.BorderSizePixel   = 0
-    row.LayoutOrder       = order
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-
-    local lbl = Instance.new("TextLabel", row)
-    lbl.Size              = UDim2.new(1, -20, 0, 14)
-    lbl.Position          = UDim2.new(0, 12, 0, 4)
-    lbl.BackgroundTransparency = 1
-    lbl.Text              = label
-    lbl.TextColor3        = Color3.fromRGB(160, 160, 170)
-    lbl.Font              = Enum.Font.GothamBold
-    lbl.TextSize          = 9
-    lbl.TextXAlignment    = Enum.TextXAlignment.Left
-
-    local box = Instance.new("TextBox", row)
-    box.Size              = UDim2.new(1, -24, 0, 20)
-    box.Position          = UDim2.new(0, 12, 0, 18)
-    box.BackgroundColor3  = Color3.fromRGB(25, 25, 32)
-    box.BorderSizePixel   = 0
-    box.Text              = tostring(Config[key] or "")
-    box.PlaceholderText   = placeholder or ""
-    box.TextColor3        = Config.Theme
-    box.Font              = Enum.Font.Code
-    box.TextSize          = 10
-    box.ClearTextOnFocus  = false
-    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 4)
-    box.FocusLost:Connect(function()
-        Config[key] = box.Text
-    end)
-    return row
+local function input(par, lbl, key, o, ph)
+    local r = Instance.new("Frame", par)
+    r.Size, r.BackgroundColor3, r.BorderSizePixel, r.LayoutOrder = UDim2.new(1,0,0,40), Color3.fromRGB(18,18,24), 0, o
+    Instance.new("UICorner", r).CornerRadius = UDim.new(0,8)
+    local l = Instance.new("TextLabel", r)
+    l.Size, l.Position, l.BackgroundTransparency = UDim2.new(1,-20,0,14), UDim2.new(0,12,0,4), 1
+    l.Text, l.TextColor3, l.Font, l.TextSize = lbl, Color3.fromRGB(160,160,170), Enum.Font.GothamBold, 9
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    local b = Instance.new("TextBox", r)
+    b.Size, b.Position, b.BackgroundColor3, b.BorderSizePixel = UDim2.new(1,-24,0,20), UDim2.new(0,12,0,18), Color3.fromRGB(25,25,32), 0
+    b.Text, b.PlaceholderText, b.TextColor3, b.Font, b.TextSize = tostring(Config[key] or ""), ph or "", Config.Theme, Enum.Font.Code, 10
+    b.ClearTextOnFocus = false
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,4)
+    b.FocusLost:Connect(function() Config[key] = b.Text end)
 end
 
--- button row
-local function button(parent, label, order, fn, color)
-    local b = Instance.new("TextButton", parent)
-    b.Size              = UDim2.new(1, 0, 0, 30)
-    b.BackgroundColor3  = color or Color3.fromRGB(30, 30, 40)
-    b.Text              = label
-    b.TextColor3        = Color3.fromRGB(230, 230, 240)
-    b.Font              = Enum.Font.GothamBold
-    b.TextSize          = 10
-    b.LayoutOrder       = order
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+local function button(par, lbl, o, fn)
+    local b = Instance.new("TextButton", par)
+    b.Size, b.BackgroundColor3, b.Text, b.TextColor3 = UDim2.new(1,0,0,30), Color3.fromRGB(30,30,40), lbl, Color3.fromRGB(230,230,240)
+    b.Font, b.TextSize, b.LayoutOrder = Enum.Font.GothamBold, 10, o
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
     b.MouseButton1Click:Connect(fn)
-    return b
 end
 
 -- ============================================================
@@ -597,49 +386,432 @@ makeTab("Movement", 2)
 makeTab("Farming",  3)
 makeTab("Visuals",  4)
 makeTab("Utility",  5)
-makeTab("Settings", 6)
 
--- default active tab
+-- ============================================================
+--  TAB CONTENT
+-- ============================================================
+sec(Pages.Combat, "Fast Attack", 1)
+toggle(Pages.Combat, "Enable Fast Attack", "FastAttack", 2)
+slider(Pages.Combat, "Range", "FastAttackRange", 20, 500, 3)
+slider(Pages.Combat, "Tick Divisor", "FastAttackTick", 1, 8, 4)
+sec(Pages.Combat, "Kill Aura", 5)
+toggle(Pages.Combat, "Enable Kill Aura", "KillAura", 6)
+slider(Pages.Combat, "Kill Aura Range", "KillAuraRange", 30, 500, 7)
+slider(Pages.Combat, "Kill Aura Delay", "KillAuraDelay", 0.05, 1, 8)
+toggle(Pages.Combat, "Target Players", "KillAuraPlayer", 9)
+toggle(Pages.Combat, "Target NPCs", "KillAuraNPC", 10)
+sec(Pages.Combat, "Hitbox Expander", 11)
+toggle(Pages.Combat, "Enable Hitbox", "Hitbox", 12)
+slider(Pages.Combat, "Size Multiplier", "HitboxSize", 1, 30, 13)
+input(Pages.Combat, "Target (empty = all)", "HitboxTarget", 14, "username")
+sec(Pages.Combat, "Silent Aim", 15)
+toggle(Pages.Combat, "Enable Silent Aim", "SilentAim", 16)
+slider(Pages.Combat, "Silent Aim FOV", "SilentAimFOV", 20, 500, 17)
+toggle(Pages.Combat, "Show FOV Circle", "SilentAimShowFOV", 18)
+toggle(Pages.Combat, "Team Check", "SilentAimTeamCheck", 19)
+sec(Pages.Combat, "Silent Aim v2", 20)
+toggle(Pages.Combat, "Enable Silent Aim v2", "SilentAim2", 21)
+sec(Pages.Combat, "Trigger Bot", 22)
+toggle(Pages.Combat, "Enable Trigger Bot", "TriggerBot", 23)
+slider(Pages.Combat, "Trigger Range", "TriggerBotRange", 50, 2000, 24)
+slider(Pages.Combat, "Trigger Delay", "TriggerBotDelay", 0.02, 0.5, 25)
+sec(Pages.Combat, "Aimlock v2 (hold Alt)", 26)
+toggle(Pages.Combat, "Enable Aimlock v2", "Aimlock2", 27)
+sec(Pages.Combat, "Auto Dodge", 28)
+toggle(Pages.Combat, "Enable Auto Dodge", "AutoDodge", 29)
+slider(Pages.Combat, "Dodge Range", "AutoDodgeRange", 10, 100, 30)
+sec(Pages.Combat, "Weapon Cycle", 31)
+toggle(Pages.Combat, "Enable Weapon Cycle", "WeaponCycle", 32)
+slider(Pages.Combat, "Cycle Delay", "WeaponCycleDelay", 0.1, 2, 33)
+sec(Pages.Combat, "ESP", 34)
+toggle(Pages.Combat, "Players", "ESPPlayers", 35)
+toggle(Pages.Combat, "Fruits", "ESPFruits", 36)
+toggle(Pages.Combat, "NPCs", "ESPNPCs", 37)
+sec(Pages.Combat, "Indicators", 38)
+toggle(Pages.Combat, "Cooldown Indicator", "CooldownIndicator", 39)
+toggle(Pages.Combat, "Damage Numbers", "DamageNumbers", 40)
+toggle(Pages.Combat, "Hit Effects", "HitEffects", 41)
+sec(Pages.Combat, "Skin Changer", 42)
+input(Pages.Combat, "Target UserID", "SkinTargetId", 43, "123456")
+toggle(Pages.Combat, "Apply Skin (one-shot)", "SkinChanger", 44)
+sec(Pages.Combat, "Defense", 45)
+toggle(Pages.Combat, "Anti-Lava", "AntiLava", 46)
+toggle(Pages.Combat, "Anti-Stun", "AntiStun", 47)
+toggle(Pages.Combat, "Anti-Chair", "AntiChair", 48)
+toggle(Pages.Combat, "Anti-Ragdoll", "AntiRagdoll", 49)
+toggle(Pages.Combat, "Anti-Fling", "AntiFling", 50)
+
+sec(Pages.Movement, "Speed", 1)
+toggle(Pages.Movement, "Enable Speed", "SpeedEnabled", 2)
+slider(Pages.Movement, "Walk Speed", "Speed", 16, 300, 3)
+sec(Pages.Movement, "Jump", 4)
+toggle(Pages.Movement, "Enable Jump Power", "JumpEnabled", 5)
+slider(Pages.Movement, "Jump Power", "Jump", 50, 500, 6)
+sec(Pages.Movement, "Fly", 7)
+toggle(Pages.Movement, "Enable Fly", "Fly", 8)
+slider(Pages.Movement, "Fly Speed", "FlySpeed", 20, 400, 9)
+sec(Pages.Movement, "Noclip / InfJump", 10)
+toggle(Pages.Movement, "Noclip", "Noclip", 11)
+toggle(Pages.Movement, "Infinite Jump", "InfJump", 12)
+sec(Pages.Movement, "Flash Step (E key)", 13)
+toggle(Pages.Movement, "Enable Flash Step", "FlashStep", 14)
+slider(Pages.Movement, "Flash Step Range", "FlashStepRange", 20, 500, 15)
+sec(Pages.Movement, "Advanced FlashStep", 16)
+toggle(Pages.Movement, "Infinite FlashStep", "InfiniteFlashStep", 17)
+toggle(Pages.Movement, "Air FlashStep (R key)", "AirFlashStep", 18)
+slider(Pages.Movement, "Air FlashStep Range", "AirFlashStepRange", 20, 500, 19)
+sec(Pages.Movement, "Dash", 20)
+toggle(Pages.Movement, "Enable Dash Length", "DashLength", 21)
+slider(Pages.Movement, "Dash Distance", "DashLengthValue", 10, 200, 22)
+sec(Pages.Movement, "Auto Farm Walk", 23)
+toggle(Pages.Movement, "Enable Auto Farm Walk", "AutoFarmWalk", 24)
+sec(Pages.Movement, "Bunny Hop", 25)
+toggle(Pages.Movement, "Enable Bunny Hop", "BunnyHop", 26)
+sec(Pages.Movement, "Spin Bot", 27)
+toggle(Pages.Movement, "Enable Spin Bot", "SpinBot", 28)
+slider(Pages.Movement, "Spin Speed", "SpinBotSpeed", 50, 1000, 29)
+
+sec(Pages.Farming, "Legendary Sword", 1)
+toggle(Pages.Farming, "Auto Buy Legendary Sword", "LegendarySword", 2)
+sec(Pages.Farming, "Fruit M1", 3)
+toggle(Pages.Farming, "Enable Fruit M1 Spam", "FruitM1", 4)
+slider(Pages.Farming, "Delay (sec)", "FruitM1Delay", 0.05, 1, 5)
+sec(Pages.Farming, "Fruit Collection", 6)
+toggle(Pages.Farming, "Auto Collect Fruit", "AutoCollectFruit", 7)
+toggle(Pages.Farming, "Auto Store Fruit", "AutoStoreFruit", 8)
+sec(Pages.Farming, "Auto Quest", 9)
+toggle(Pages.Farming, "Enable Auto Quest", "AutoQuest", 10)
+sec(Pages.Farming, "Auto Boss", 11)
+toggle(Pages.Farming, "Enable Auto Boss", "AutoBoss", 12)
+sec(Pages.Farming, "Chest Farm", 13)
+toggle(Pages.Farming, "Enable Chest Farm", "ChestFarm", 14)
+sec(Pages.Farming, "Auto Raid", 15)
+toggle(Pages.Farming, "Enable Auto Raid", "AutoRaid", 16)
+sec(Pages.Farming, "Auto Race V3", 17)
+toggle(Pages.Farming, "Auto Race V3 (spam T)", "AutoRaceV3", 18)
+sec(Pages.Farming, "Auto Awakening", 19)
+toggle(Pages.Farming, "Enable Auto Awakening", "AutoAwakening", 20)
+sec(Pages.Farming, "Auto Gacha", 21)
+toggle(Pages.Farming, "Enable Auto Gacha", "AutoGacha", 22)
+sec(Pages.Farming, "Mastery Farm", 23)
+toggle(Pages.Farming, "Enable Mastery Farm", "MasteryFarm", 24)
+sec(Pages.Farming, "Elite Hunter", 25)
+toggle(Pages.Farming, "Enable Elite Hunter", "EliteHunter", 26)
+
+sec(Pages.Visuals, "Weather", 1)
+toggle(Pages.Visuals, "Snow", "Snow", 2)
+toggle(Pages.Visuals, "Rain", "Rain", 3)
+sec(Pages.Visuals, "Trail", 4)
+toggle(Pages.Visuals, "Enable Trail", "Trail", 5)
+sec(Pages.Visuals, "Environment", 6)
+toggle(Pages.Visuals, "Remove Skybox", "RemoveSkybox", 7)
+toggle(Pages.Visuals, "Fullbright", "Fullbright", 8)
+toggle(Pages.Visuals, "No Fog", "NoFog", 9)
+toggle(Pages.Visuals, "Potato Graphics", "PotatoGraphics", 10)
+sec(Pages.Visuals, "Camera", 11)
+slider(Pages.Visuals, "Field of View", "FOVValue", 20, 120, 12)
+sec(Pages.Visuals, "HUD", 13)
+toggle(Pages.Visuals, "Show FPS", "ShowFPS", 14)
+toggle(Pages.Visuals, "Show Ping", "ShowPing", 15)
+toggle(Pages.Visuals, "Show Uptime", "ShowUptime", 16)
+toggle(Pages.Visuals, "Show Server", "ShowServer", 17)
+sec(Pages.Visuals, "Customization", 18)
+input(Pages.Visuals, "Custom Cursor ID", "CustomCursorId", 19, "assetid")
+toggle(Pages.Visuals, "Enable Tool Color Changer", "ToolColorChanger", 20)
+input(Pages.Visuals, "Emote ID", "EmoteID", 21, "assetid")
+
+sec(Pages.Utility, "Safety", 1)
+toggle(Pages.Utility, "Anti-Void", "AntiVoid", 2)
+toggle(Pages.Utility, "Auto Rejoin", "AutoRejoin", 3)
+toggle(Pages.Utility, "Anti-AFK", "AntiAFK", 4)
+sec(Pages.Utility, "Performance", 5)
+toggle(Pages.Utility, "FPS Unlocker", "FPSUnlocker", 6)
+sec(Pages.Utility, "Info", 7)
+toggle(Pages.Utility, "Server Info Display", "ServerInfo", 8)
+sec(Pages.Utility, "Troll", 9)
+toggle(Pages.Utility, "Enable Fake Lag", "FakeLag", 10)
+toggle(Pages.Utility, "Enable Panic Mode (P key)", "PanicMode", 11)
+toggle(Pages.Utility, "Enable Desync", "Desync", 12)
+slider(Pages.Utility, "Desync Range", "DesyncRange", 5, 100, 13)
+sec(Pages.Utility, "Server Actions", 14)
+button(Pages.Utility, "Copy Job ID", 15, function()
+    if has.setclipboard then setclipboard(game.JobId) end
+    print("[NEXUS] Job ID:", game.JobId)
+end)
+button(Pages.Utility, "Rejoin Server", 16, function()
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, lp)
+end)
+button(Pages.Utility, "Server Hop", 17, function()
+    pcall(function()
+        local s = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+        for _, v in ipairs(s.data) do
+            if v.playing ~= v.maxPlayers and v.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, v.id, lp)
+                break
+            end
+        end
+    end)
+end)
+
 for n, p in pairs(Pages) do p.Visible = (n == "Combat") end
-if TabButtons.Combat then
-    TabButtons.Combat.BackgroundColor3 = Config.Theme
-    TabButtons.Combat.TextColor3       = Color3.fromRGB(10, 10, 15)
+TabButtons.Combat.BackgroundColor3, TabButtons.Combat.TextColor3 = Config.Theme, Color3.fromRGB(10,10,15)
+
+-- ============================================================
+--  BACKEND: NET
+-- ============================================================
+local function getNet()
+    if State.NetCache then return State.NetCache end
+    local ok, mod = pcall(function()
+        return require(ReplicatedStorage:WaitForChild("Modules",5):WaitForChild("Net",5))
+    end)
+    if ok and mod then State.NetCache = mod end
+    return State.NetCache
 end
 
 -- ============================================================
---  END OF PART 1
+--  COMBAT BACKEND
 -- ============================================================
--- Part 2 continues with: Combat · Movement · Farming logic
--- Part 3 continues with: Visuals · Utility · tab wiring
--- ============================================================
---  NEXUS HUB v1.2 — EXTENSION PACK
---  Combat + Defense additions
--- ============================================================
+local faLast = setmetatable({}, {__mode="k"})
+local function faParts(t)
+    local p = {}
+    for _, c in ipairs(t:GetChildren()) do
+        if c:IsA("BasePart") then p[#p+1] = {t, c} end
+    end
+    return p
+end
+local function fireFA(t)
+    if not t or not t.Parent then return end
+    local now = tick()
+    if faLast[t] and now - faLast[t] < 0.1 then return end
+    faLast[t] = now
+    local hrp = t:FindFirstChild("HumanoidRootPart")
+    if not hrp or not getNet() then return end
+    local atk = ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterAttack")
+    local hit = ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
+    if not atk or not hit then return end
+    local parts = faParts(t)
+    if #parts == 0 then return end
+    pcall(function() atk:FireServer(); hit:FireServer(hrp, parts) end)
+end
+local faFrame = 0
+RunService.Heartbeat:Connect(function()
+    if not Config.FastAttack or not State.Root then return end
+    faFrame += 1
+    if faFrame % math.max(1, Config.FastAttackTick) ~= 0 then return end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health > 0 and (hrp.Position - State.Root.Position).Magnitude <= Config.FastAttackRange then
+                task.spawn(fireFA, p.Character)
+            end
+        end
+    end
+    local en = Workspace:FindFirstChild("Enemies")
+    if en then
+        for _, e in ipairs(en:GetChildren()) do
+            if e:IsA("Model") then
+                local hrp = e:FindFirstChild("HumanoidRootPart")
+                local hum = e:FindFirstChildOfClass("Humanoid")
+                if hrp and hum and hum.Health > 0 and (hrp.Position - State.Root.Position).Magnitude <= Config.FastAttackRange then
+                    task.spawn(fireFA, e)
+                end
+            end
+        end
+    end
+end)
 
--- ============ EXTENDED CONFIG ============
-Config.TriggerBot = false
-Config.TriggerBotRange = 500
-Config.TriggerBotDelay = 0.05
+local function kaFire(target)
+    if not target or not target.Parent then return end
+    local now = tick()
+    if State.KillAuraLast[target] and now - State.KillAuraLast[target] < Config.KillAuraDelay then return end
+    State.KillAuraLast[target] = now
+    local hrp = target:FindFirstChild("HumanoidRootPart")
+    if not hrp or not getNet() then return end
+    local atk = ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterAttack")
+    local hit = ReplicatedStorage.Modules.Net:FindFirstChild("RE/RegisterHit")
+    if not atk or not hit then return end
+    local parts = faParts(target)
+    if #parts == 0 then return end
+    pcall(function() atk:FireServer(); hit:FireServer(hrp, parts) end)
+end
+task.spawn(function()
+    while task.wait(0.05) do
+        if Config.KillAura and State.Root then
+            if Config.KillAuraPlayer then
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= lp and p.Character then
+                        local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                        if hrp and hum and hum.Health > 0 and (hrp.Position - State.Root.Position).Magnitude <= Config.KillAuraRange then
+                            task.spawn(kaFire, p.Character)
+                        end
+                    end
+                end
+            end
+            if Config.KillAuraNPC then
+                local en = Workspace:FindFirstChild("Enemies")
+                if en then
+                    for _, e in ipairs(en:GetChildren()) do
+                        if e:IsA("Model") then
+                            local hrp = e:FindFirstChild("HumanoidRootPart")
+                            local hum = e:FindFirstChildOfClass("Humanoid")
+                            if hrp and hum and hum.Health > 0 and (hrp.Position - State.Root.Position).Magnitude <= Config.KillAuraRange then
+                                task.spawn(kaFire, e)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
 
-Config.Aimlock2 = false
-Config.Aimlock2Key = Enum.KeyCode.LeftAlt
+local HB_PARTS = {"HumanoidRootPart","Head","UpperTorso","LowerTorso","Torso"}
+local function hbExpand(p)
+    if not p:IsA("BasePart") then return end
+    if not State.HitboxOriginals[p] then
+        State.HitboxOriginals[p] = {Size=p.Size, Transparency=p.Transparency, CanCollide=p.CanCollide,
+            CanTouch=p.CanTouch, CanQuery=p.CanQuery, Massless=p.Massless, Shape=p:IsA("Part") and p.Shape or nil}
+    end
+    local o = State.HitboxOriginals[p]
+    p.Size = o.Size * Config.HitboxSize
+    p.Transparency = 1
+    p.CanCollide = false
+    p.CanTouch = true
+    p.CanQuery = false
+    p.Massless = true
+    if p:IsA("Part") then pcall(function() p.Shape = Enum.PartType.Ball end) end
+end
+local function hbRestore(p)
+    if not p or not p.Parent then return end
+    local o = State.HitboxOriginals[p]
+    if not o then return end
+    pcall(function()
+        p.Size, p.Transparency, p.CanCollide = o.Size, o.Transparency, o.CanCollide
+        p.CanTouch, p.CanQuery, p.Massless = o.CanTouch, o.CanQuery, o.Massless
+        if o.Shape and p:IsA("Part") then p.Shape = o.Shape end
+    end)
+    State.HitboxOriginals[p] = nil
+end
+task.spawn(function()
+    while task.wait(0.1) do
+        if not Config.Hitbox then
+            for p in pairs(State.HitboxOriginals) do hbRestore(p) end
+        else
+            for _, pl in ipairs(Players:GetPlayers()) do
+                if pl ~= lp and pl.Character then
+                    local should = Config.HitboxMode == "All" or (Config.HitboxTarget ~= "" and pl.Name:lower():find(Config.HitboxTarget:lower(), 1, true))
+                    if should then
+                        for _, name in ipairs(HB_PARTS) do
+                            local part = pl.Character:FindFirstChild(name)
+                            if part then hbExpand(part) end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
 
-Config.SilentAim2 = false
+local function saGetTarget()
+    if not State.Root then return nil end
+    local mousePos = UserInputService:GetMouseLocation()
+    local closest, closestDist = nil, Config.SilentAimFOV
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character then
+            local skip = false
+            if Config.SilentAimTeamCheck and p.Team and lp.Team and p.Team == lp.Team then skip = true end
+            if not skip then
+                local part = p.Character:FindFirstChild(Config.SilentAimPart)
+                local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                if part and hum and hum.Health > 0 then
+                    local pos, onScreen = camera:WorldToViewportPoint(part.Position)
+                    if onScreen then
+                        local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
+                        if dist < closestDist then
+                            closestDist = dist
+                            closest = {part = part, char = p.Character}
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
 
-Config.SkinChanger = false
-Config.SkinTargetId = ""
+if has.getrawmetatable and has.hookmetamethod then
+    local ok, err = pcall(function()
+        local oldIndex
+        oldIndex = hookmetamethod(game, "__index", function(self, key)
+            if Config.SilentAim and (self == camera or tostring(self):find("Camera")) and key == "CFrame" then
+                local t = saGetTarget()
+                if t and t.part then
+                    return CFrame.new(camera.CFrame.Position, t.part.Position)
+                end
+            end
+            return oldIndex(self, key)
+        end)
+    end)
+    if not ok then warn("[NEXUS] Silent Aim hook failed:", err) end
+end
 
-Config.AntiLava = false
-Config.AntiStun = false
-Config.AntiChair = false
-Config.AntiRagdoll = false
-Config.AntiFling = false
+if has.getrawmetatable and has.setreadonly then
+    pcall(function()
+        local mt = getrawmetatable(game)
+        if mt and mt.__index then
+            local oldIndex = mt.__index
+            setreadonly(mt, false)
+            mt.__index = newcclosure(function(self, key)
+                if Config.SilentAim2 and (key == "Hit" or key == "Target") and self == lp:GetMouse() then
+                    local best, bestDist = nil, 500
+                    local center = camera.ViewportSize / 2
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        if p ~= lp and p.Character then
+                            local part = p.Character:FindFirstChild("Head")
+                            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                            if part and hum and hum.Health > 0 then
+                                local pos, onScreen = camera:WorldToViewportPoint(part.Position)
+                                if onScreen then
+                                    local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
+                                    if dist < bestDist then
+                                        bestDist = dist
+                                        best = part
+                                    end
+                                end
+                            end
+                        end
+                    end
+                    if best then
+                        if key == "Hit" then return best.CFrame end
+                        if key == "Target" then return best end
+                    end
+                end
+                return oldIndex(self, key)
+            end)
+            setreadonly(mt, true)
+        end
+    end)
+end
 
--- ============ EXTENDED STATE ============
-State.TriggerLast = 0
-State.AimlockHolding = false
+if Drawing and Drawing.new then
+    State.SilentAimCircle = Drawing.new("Circle")
+    State.SilentAimCircle.Thickness = 1.5
+    State.SilentAimCircle.NumSides = 80
+    State.SilentAimCircle.Filled = false
+    State.SilentAimCircle.Color = Config.Theme
+    State.SilentAimCircle.Transparency = 0.8
+    State.SilentAimCircle.Visible = false
+    RunService.RenderStepped:Connect(function()
+        if State.SilentAimCircle then
+            State.SilentAimCircle.Visible = Config.SilentAim and Config.SilentAimShowFOV
+            State.SilentAimCircle.Radius = Config.SilentAimFOV
+            State.SilentAimCircle.Position = UserInputService:GetMouseLocation()
+        end
+    end)
+end
 
--- ============ TRIGGER BOT ============
 task.spawn(function()
     while task.wait(0.02) do
         if Config.TriggerBot and State.Character and State.Humanoid then
@@ -667,19 +839,13 @@ task.spawn(function()
     end
 end)
 
--- ============ AIMLOCK v2 ============
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if Config.Aimlock2 and input.KeyCode == Config.Aimlock2Key then
-        State.AimlockHolding = true
-    end
+    if Config.Aimlock2 and input.KeyCode == Config.Aimlock2Key then State.AimlockHolding = true end
 end)
 UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Config.Aimlock2Key then
-        State.AimlockHolding = false
-    end
+    if input.KeyCode == Config.Aimlock2Key then State.AimlockHolding = false end
 end)
-
 RunService.RenderStepped:Connect(function()
     if Config.Aimlock2 and State.AimlockHolding and State.Root then
         local mouse = lp:GetMouse()
@@ -687,54 +853,12 @@ RunService.RenderStepped:Connect(function()
             local model = mouse.Target.Parent
             if model and model ~= State.Character then
                 local part = model:FindFirstChild("Head")
-                if part then
-                    camera.CFrame = CFrame.new(camera.CFrame.Position, part.Position)
-                end
+                if part then camera.CFrame = CFrame.new(camera.CFrame.Position, part.Position) end
             end
         end
     end
 end)
 
--- ============ SILENT AIM v2 ============
-if has.getrawmetatable and has.hookmetamethod and has.setreadonly then
-    local ok = pcall(function()
-        local mt = getrawmetatable(game)
-        if not mt then return end
-        local oldIndex = mt.__index
-        setreadonly(mt, false)
-        mt.__index = newcclosure(function(self, key)
-            if Config.SilentAim2 and (key == "Hit" or key == "Target") and self == lp:GetMouse() then
-                local best, bestDist = nil, 500
-                local center = camera.ViewportSize / 2
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p ~= lp and p.Character then
-                        local part = p.Character:FindFirstChild("Head")
-                        local hum = p.Character:FindFirstChildOfClass("Humanoid")
-                        if part and hum and hum.Health > 0 then
-                            local pos, onScreen = camera:WorldToViewportPoint(part.Position)
-                            if onScreen then
-                                local dist = (Vector2.new(pos.X, pos.Y) - center).Magnitude
-                                if dist < bestDist then
-                                    bestDist = dist
-                                    best = part
-                                end
-                            end
-                        end
-                    end
-                end
-                if best then
-                    if key == "Hit" then return best.CFrame end
-                    if key == "Target" then return best end
-                end
-            end
-            return oldIndex(self, key)
-        end)
-        setreadonly(mt, true)
-    end)
-    if not ok then warn("[NEXUS] Silent Aim v2 hook failed") end
-end
-
--- ============ SKIN CHANGER ============
 task.spawn(function()
     while task.wait(0.5) do
         if Config.SkinChanger and Config.SkinTargetId ~= "" and State.Character then
@@ -752,21 +876,18 @@ task.spawn(function()
     end
 end)
 
--- ============ ANTI-LAVA ============
 task.spawn(function()
-    while task.wait(0.5) do
-        if Config.AntiLava then
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    local n = v.Name:lower()
-                    local p = v.Parent and v.Parent.Name:lower() or ""
-                    if (n:find("lava") or n:find("magma") or n:find("fire") or
-                        n:find("damage") or n:find("kill") or n:find("void") or
-                        p:find("damage") or p:find("lava")) then
-                        pcall(function()
-                            v.CanTouch = false
-                            v.Material = Enum.Material.Plastic
-                        end)
+    while task.wait(0.1) do
+        if Config.AutoDodge and State.Root then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= lp and p.Character then
+                    local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then
+                        local dist = (hrp.Position - State.Root.Position).Magnitude
+                        if dist < Config.AutoDodgeRange then
+                            local offset = Vector3.new(math.random(-15,15), 0, math.random(-15,15))
+                            State.Root.CFrame = CFrame.new(State.Root.Position + offset) * State.Root.CFrame.Rotation
+                        end
                     end
                 end
             end
@@ -774,7 +895,130 @@ task.spawn(function()
     end
 end)
 
--- ============ ANTI-STUN ============
+task.spawn(function()
+    while task.wait(0.1) do
+        if Config.WeaponCycle then
+            local now = tick()
+            if now - State.WeaponCycleLast >= Config.WeaponCycleDelay then
+                State.WeaponCycleLast = now
+                local bp = lp:FindFirstChild("Backpack")
+                if bp and State.Humanoid then
+                    local tools = {}
+                    for _, t in ipairs(bp:GetChildren()) do
+                        if t:IsA("Tool") then tools[#tools+1] = t end
+                    end
+                    if #tools > 0 then
+                        pcall(function() State.Humanoid:EquipTool(tools[math.random(#tools)]) end)
+                    end
+                end
+            end
+        end
+    end
+end)
+
+local function initESP()
+    if State.ESPFolder and State.ESPFolder.Parent then return end
+    State.ESPFolder = Instance.new("Folder")
+    State.ESPFolder.Name = "NEXUS_ESP"
+    pcall(function() State.ESPFolder.Parent = parent end)
+    if not State.ESPFolder.Parent then State.ESPFolder.Parent = lp:WaitForChild("PlayerGui") end
+end
+local function addHL(inst, color, name)
+    if not inst or inst:FindFirstChild(name) then return end
+    local h = Instance.new("Highlight")
+    h.Name = name
+    h.FillColor, h.OutlineColor = color, color
+    h.FillTransparency, h.OutlineTransparency = 0.55, 0
+    h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    h.Parent = inst
+end
+local function rmHL(inst, name)
+    local h = inst and inst:FindFirstChild(name)
+    if h then h:Destroy() end
+end
+task.spawn(function()
+    while task.wait(0.2) do
+        initESP()
+        if Config.ESPPlayers then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= lp and p.Character then addHL(p.Character, Color3.fromRGB(255,60,90), "NEXUS_HL_P") end
+            end
+        else
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= lp and p.Character then rmHL(p.Character, "NEXUS_HL_P") end
+            end
+        end
+        if Config.ESPFruits then
+            for _, v in ipairs(Workspace:GetChildren()) do
+                if v:IsA("Tool") and v.Name:lower():find("fruit") then
+                    addHL(v, Color3.fromRGB(120,255,120), "NEXUS_HL_F")
+                end
+            end
+        end
+        local en = Workspace:FindFirstChild("Enemies")
+        if Config.ESPNPCs and en then
+            for _, e in ipairs(en:GetChildren()) do
+                if e:IsA("Model") and e:FindFirstChild("Humanoid") then
+                    addHL(e, Color3.fromRGB(255,150,50), "NEXUS_HL_N")
+                end
+            end
+        elseif en then
+            for _, e in ipairs(en:GetChildren()) do rmHL(e, "NEXUS_HL_N") end
+        end
+    end
+end)
+
+task.spawn(function()
+    State.CooldownGui = Instance.new("ScreenGui")
+    State.CooldownGui.Name = "NEXUS_Cooldown"
+    State.CooldownGui.ResetOnSpawn = false
+    pcall(function() State.CooldownGui.Parent = parent end)
+    if not State.CooldownGui.Parent then State.CooldownGui.Parent = lp:WaitForChild("PlayerGui") end
+    local lbl = Instance.new("TextLabel", State.CooldownGui)
+    lbl.Size = UDim2.new(0, 200, 0, 40)
+    lbl.Position = UDim2.new(0, 20, 0, 200)
+    lbl.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+    lbl.BackgroundTransparency = 0.3
+    lbl.BorderSizePixel = 0
+    lbl.TextColor3 = Config.Theme
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 12
+    Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 8)
+    while task.wait(0.1) do
+        if Config.CooldownIndicator then
+            lbl.Visible = true
+            local info = {}
+            local char = State.Character
+            if char then
+                for _, v in ipairs(char:GetDescendants()) do
+                    if v:IsA("NumberValue") and (v.Name:lower():find("cooldown") or v.Name:lower():find("cd")) then
+                        info[#info+1] = v.Name .. ": " .. tostring(math.floor(v.Value * 100) / 100)
+                    end
+                end
+            end
+            lbl.Text = #info > 0 and table.concat(info, "\n") or "No cooldowns"
+        else
+            lbl.Visible = false
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.AntiLava then
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if v:IsA("BasePart") then
+                    local n = v.Name:lower()
+                    local p = v.Parent and v.Parent.Name:lower() or ""
+                    if (n:find("lava") or n:find("magma") or n:find("fire") or n:find("damage") or n:find("kill") or n:find("void") or p:find("damage") or p:find("lava")) then
+                        pcall(function() v.CanTouch = false; v.Material = Enum.Material.Plastic end)
+                    end
+                end
+            end
+        end
+    end
+end)
+
 task.spawn(function()
     while task.wait(0.1) do
         if Config.AntiStun and State.Humanoid and State.Root then
@@ -797,7 +1041,6 @@ task.spawn(function()
     end
 end)
 
--- ============ ANTI-CHAIR ============
 task.spawn(function()
     while task.wait(0.2) do
         if Config.AntiChair and State.Humanoid then
@@ -813,7 +1056,6 @@ task.spawn(function()
     end
 end)
 
--- ============ ANTI-RAGDOLL ============
 task.spawn(function()
     while task.wait(0.2) do
         if Config.AntiRagdoll and State.Humanoid then
@@ -826,7 +1068,6 @@ task.spawn(function()
     end
 end)
 
--- ============ ANTI-FLING ============
 task.spawn(function()
     while task.wait(0.1) do
         if Config.AntiFling and State.Root then
@@ -838,51 +1079,110 @@ task.spawn(function()
     end
 end)
 
--- ============ UI: EXTENSION TAB ============
-local CombatPage = Pages.Combat
-
-sec(CombatPage, "Trigger Bot", 100)
-toggle(CombatPage, "Enable Trigger Bot", "TriggerBot", 101)
-slider(CombatPage, "Trigger Range", "TriggerBotRange", 50, 2000, 102)
-slider(CombatPage, "Trigger Delay", "TriggerBotDelay", 0.02, 0.5, 103)
-
-sec(CombatPage, "Aimlock v2", 104)
-toggle(CombatPage, "Enable Aimlock (hold Alt)", "Aimlock2", 105)
-
-sec(CombatPage, "Silent Aim v2", 106)
-toggle(CombatPage, "Enable Silent Aim v2", "SilentAim2", 107)
-
-sec(CombatPage, "Skin Changer", 108)
-input(CombatPage, "Target UserID", "SkinTargetId", 109, "123456")
-toggle(CombatPage, "Apply Skin (one-shot)", "SkinChanger", 110)
-
-sec(CombatPage, "Defense", 111)
-toggle(CombatPage, "Anti-Lava", "AntiLava", 112)
-toggle(CombatPage, "Anti-Stun", "AntiStun", 113)
-toggle(CombatPage, "Anti-Chair", "AntiChair", 114)
-toggle(CombatPage, "Anti-Ragdoll", "AntiRagdoll", 115)
-toggle(CombatPage, "Anti-Fling", "AntiFling", 116)
-
-print("[NEXUS v1.2] Part 1/3 — Combat + Defense extensions loaded")
+print("[NEXUS v1.3] Combat backend ready")
 -- ============================================================
---  NEXUS HUB v1.2 — Extension Pack (Part 2)
---  Movement + Farming additions
+--  MOVEMENT BACKEND
 -- ============================================================
+task.spawn(function()
+    while task.wait(0.1) do
+        if State.Humanoid then
+            State.Humanoid.WalkSpeed = Config.SpeedEnabled and Config.Speed or 16
+            if Config.JumpEnabled then
+                State.Humanoid.UseJumpPower = true
+                State.Humanoid.JumpPower = Config.Jump
+            end
+            if Config.Noclip and State.Character then
+                for _, p in ipairs(State.Character:GetDescendants()) do
+                    if p:IsA("BasePart") and p.CanCollide then p.CanCollide = false end
+                end
+            end
+        end
+    end
+end)
 
--- ============ EXTENDED CONFIG ============
-Config.InfiniteFlashStep = false
-Config.AirFlashStep = false
-Config.AirFlashStepRange = 200
-Config.DashLength = false
-Config.DashLengthValue = 50
+local function enableFly()
+    if not State.Root then return end
+    if not State.FlyBV then
+        State.FlyBV = Instance.new("BodyVelocity")
+        State.FlyBV.Name = "NEXUS_FlyBV"
+        State.FlyBV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        State.FlyBV.Velocity = Vector3.zero
+        State.FlyBV.Parent = State.Root
+    end
+    if not State.FlyBG then
+        State.FlyBG = Instance.new("BodyGyro")
+        State.FlyBG.Name = "NEXUS_FlyBG"
+        State.FlyBG.P = 9e4
+        State.FlyBG.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+        State.FlyBG.CFrame = State.Root.CFrame
+        State.FlyBG.Parent = State.Root
+    end
+end
 
-Config.AutoRaceV3 = false
-Config.AutoAwakening = false
-Config.AutoGacha = false
-Config.MasteryFarm = false
-Config.EliteHunter = false
+local function disableFly()
+    if State.FlyBV then State.FlyBV:Destroy(); State.FlyBV = nil end
+    if State.FlyBG then State.FlyBG:Destroy(); State.FlyBG = nil end
+    if State.Humanoid then State.Humanoid.PlatformStand = false end
+end
 
--- ============ INFINITE FLASH STEP ============
+RunService.Heartbeat:Connect(function()
+    if not Config.Fly or not State.Root or not State.Humanoid then
+        if State.FlyBV then State.FlyBV.Velocity = Vector3.zero end
+        return
+    end
+    enableFly()
+    local camCF = camera.CFrame
+    local dir = Vector3.zero
+    if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir += camCF.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir -= camCF.LookVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir -= camCF.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir += camCF.RightVector end
+    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.yAxis end
+    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.yAxis end
+    State.FlyBG.CFrame = camCF
+    State.FlyBV.Velocity = (dir.Magnitude > 0) and (dir.Unit * (Config.FlySpeed * 4)) or Vector3.zero
+    State.Humanoid.PlatformStand = true
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if Config.InfJump and State.Humanoid then
+        State.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+    if Config.BunnyHop and State.Humanoid then
+        State.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if Config.FlashStep and input.KeyCode == Enum.KeyCode.E and State.Root then
+        local hit = lp:GetMouse().Hit
+        if hit then
+            local dir = (hit.Position - State.Root.Position)
+            local dist = dir.Magnitude
+            if dist > Config.FlashStepRange then
+                dir = dir.Unit * Config.FlashStepRange
+            end
+            State.Root.CFrame = CFrame.new(State.Root.Position + dir + Vector3.new(0, 3, 0))
+        end
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if Config.AirFlashStep and input.KeyCode == Enum.KeyCode.R and State.Root then
+        local hit = lp:GetMouse().Hit
+        if hit then
+            local dir = (hit.Position - State.Root.Position)
+            local dist = dir.Magnitude
+            if dist > Config.AirFlashStepRange then
+                dir = dir.Unit * Config.AirFlashStepRange
+            end
+            State.Root.CFrame = CFrame.new(State.Root.Position + dir + Vector3.new(0, 3, 0))
+        end
+    end
+end)
+
 task.spawn(function()
     while task.wait(0.1) do
         if Config.InfiniteFlashStep and State.Character then
@@ -893,22 +1193,6 @@ task.spawn(function()
     end
 end)
 
--- ============ AIR FLASH STEP ============
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if Config.AirFlashStep and input.KeyCode == Enum.KeyCode.R and State.Root then
-        local mouse = lp:GetMouse()
-        local target = mouse.Hit.Position
-        local dir = (target - State.Root.Position)
-        local dist = dir.Magnitude
-        if dist > Config.AirFlashStepRange then
-            dir = dir.Unit * Config.AirFlashStepRange
-        end
-        State.Root.CFrame = CFrame.new(State.Root.Position + dir + Vector3.new(0, 3, 0))
-    end
-end)
-
--- ============ DASH LENGTH ============
 task.spawn(function()
     while task.wait(0.1) do
         if Config.DashLength and State.Character then
@@ -920,9 +1204,211 @@ task.spawn(function()
     end
 end)
 
--- ============ AUTO RACE V3 ============
 task.spawn(function()
-    local VirtualInputManager = game:GetService("VirtualInputManager")
+    while task.wait(0.4) do
+        if Config.AutoFarmWalk and State.Root and State.Humanoid then
+            local en = Workspace:FindFirstChild("Enemies")
+            if en then
+                local closest, closestDist = nil, math.huge
+                for _, e in ipairs(en:GetChildren()) do
+                    if e:IsA("Model") then
+                        local hrp = e:FindFirstChild("HumanoidRootPart")
+                        local hum = e:FindFirstChildOfClass("Humanoid")
+                        if hrp and hum and hum.Health > 0 then
+                            local d = (hrp.Position - State.Root.Position).Magnitude
+                            if d < closestDist and d < 200 then
+                                closestDist = d
+                                closest = hrp
+                            end
+                        end
+                    end
+                end
+                if closest and closestDist > 15 then
+                    State.Humanoid:MoveTo(closest.Position)
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.03) do
+        if Config.SpinBot and State.Root then
+            State.Root.CFrame = State.Root.CFrame * CFrame.Angles(0, math.rad(Config.SpinBotSpeed / 50), 0)
+        end
+    end
+end)
+
+lp.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    disableFly()
+    if Config.Trail then task.wait(0.2); makeTrail() end
+end)
+
+-- ============================================================
+--  FARMING BACKEND
+-- ============================================================
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.LegendarySword then
+            pcall(function()
+                local r = ReplicatedStorage:FindFirstChild("Remotes")
+                local c = r and r:FindFirstChild("CommF_")
+                if c then
+                    for i = 1, 3 do c:InvokeServer("LegendarySwordDealer", tostring(i)) end
+                end
+            end)
+        end
+    end
+end)
+
+local function getFruitRemote()
+    if State.FruitRemote and State.FruitRemote.Parent then return State.FruitRemote end
+    if State.Character then
+        for _, c in ipairs(State.Character:GetChildren()) do
+            if c:IsA("Tool") then
+                local r = c:FindFirstChild("LeftClickRemote", true)
+                if r then State.FruitRemote = r; return r end
+            end
+        end
+    end
+    local bp = lp:FindFirstChild("Backpack")
+    if bp then
+        for _, t in ipairs(bp:GetChildren()) do
+            if t:IsA("Tool") then
+                local r = t:FindFirstChild("LeftClickRemote", true)
+                if r then State.FruitRemote = r; return r end
+            end
+        end
+    end
+    return nil
+end
+
+task.spawn(function()
+    while true do
+        task.wait(Config.FruitM1Delay)
+        if Config.FruitM1 and State.Root then
+            local r = getFruitRemote()
+            if r then pcall(function() r:FireServer(State.Root.CFrame.LookVector, 2, true) end) end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.AutoCollectFruit and State.Root then
+            for _, v in ipairs(Workspace:GetChildren()) do
+                if v:IsA("Tool") and v.Name:lower():find("fruit") then
+                    local h = v:FindFirstChild("Handle")
+                    if h then
+                        State.Root.CFrame = h.CFrame
+                        if has.firetouchinterest then
+                            pcall(function()
+                                firetouchinterest(State.Root, h, 0)
+                                firetouchinterest(State.Root, h, 1)
+                            end)
+                        end
+                        break
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if Config.AutoStoreFruit then
+            local r = ReplicatedStorage:FindFirstChild("Remotes")
+            local c = r and r:FindFirstChild("CommF_")
+            if c then
+                local function try(t)
+                    if t:IsA("Tool") and (t.ToolTip == "Blox Fruit" or t.Name:lower():find("fruit")) then
+                        local n = t:GetAttribute("OriginalName") or t.Name:gsub(" Fruit", "")
+                        pcall(function() c:InvokeServer("StoreFruit", n, t) end)
+                    end
+                end
+                if State.Character then for _, t in ipairs(State.Character:GetChildren()) do try(t) end end
+                local bp = lp:FindFirstChild("Backpack")
+                if bp then for _, t in ipairs(bp:GetChildren()) do try(t) end end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(2) do
+        if Config.AutoQuest then
+            pcall(function()
+                local r = ReplicatedStorage:FindFirstChild("Remotes")
+                local c = r and r:FindFirstChild("CommF_")
+                if c then c:InvokeServer("GetQuest") end
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.AutoBoss and State.Root and State.Humanoid then
+            local en = Workspace:FindFirstChild("Enemies")
+            if en then
+                for _, e in ipairs(en:GetChildren()) do
+                    if e:IsA("Model") then
+                        local hum = e:FindFirstChildOfClass("Humanoid")
+                        local hrp = e:FindFirstChild("HumanoidRootPart")
+                        if hum and hrp and hum.Health > 0 and hum.MaxHealth > 10000 then
+                            if (hrp.Position - State.Root.Position).Magnitude > 15 then
+                                State.Humanoid:MoveTo(hrp.Position)
+                            end
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.ChestFarm and State.Root then
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if v:IsA("Model") and (v.Name:lower():find("chest") or v.Name:lower():find("treasure")) then
+                    local primary = v.PrimaryPart or v:FindFirstChildWhichIsA("BasePart")
+                    if primary then
+                        State.Root.CFrame = CFrame.new(primary.Position + Vector3.new(0, 3, 0))
+                        break
+                    end
+                end
+            end
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if Config.AutoRaid then
+            pcall(function()
+                local en = Workspace:FindFirstChild("Enemies")
+                if en then
+                    for _, e in ipairs(en:GetChildren()) do
+                        if e:IsA("Model") then
+                            local hum = e:FindFirstChildOfClass("Humanoid")
+                            local hrp = e:FindFirstChild("HumanoidRootPart")
+                            if hum and hrp and hum.Health > 0 and State.Root then
+                                State.Root.CFrame = CFrame.new(hrp.Position + Vector3.new(0, 20, 0))
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+task.spawn(function()
     while task.wait(1) do
         if Config.AutoRaceV3 then
             pcall(function()
@@ -934,7 +1420,6 @@ task.spawn(function()
     end
 end)
 
--- ============ AUTO AWAKENING ============
 task.spawn(function()
     while task.wait(0.5) do
         if Config.AutoAwakening then
@@ -952,10 +1437,9 @@ task.spawn(function()
     end
 end)
 
--- ============ AUTO GACHA ============
 task.spawn(function()
     while task.wait(2) do
-        if Config.AutoGacha and State.Root then
+        if Config.AutoGacha then
             pcall(function()
                 local r = ReplicatedStorage:FindFirstChild("Remotes")
                 local c = r and r:FindFirstChild("CommF_")
@@ -965,7 +1449,6 @@ task.spawn(function()
     end
 end)
 
--- ============ MASTERY FARM ============
 task.spawn(function()
     local points = {
         Vector3.new(45.54, 99.37, -12605.42),
@@ -976,8 +1459,7 @@ task.spawn(function()
     local idx = 1
     while task.wait(0.5) do
         if Config.MasteryFarm and State.Root then
-            local target = points[idx]
-            State.Root.CFrame = CFrame.new(target)
+            State.Root.CFrame = CFrame.new(points[idx])
             local tool = State.Character and State.Character:FindFirstChildOfClass("Tool")
             if tool then pcall(function() tool:Activate() end) end
             idx = idx % #points + 1
@@ -985,7 +1467,6 @@ task.spawn(function()
     end
 end)
 
--- ============ ELITE HUNTER ============
 task.spawn(function()
     while task.wait(0.5) do
         if Config.EliteHunter and State.Root and State.Humanoid then
@@ -1011,62 +1492,180 @@ task.spawn(function()
     end
 end)
 
--- ============ UI: EXTENSION ADDITIONS ============
-local MovePage = Pages.Movement
-local FarmPage = Pages.Farming
-
-sec(MovePage, "Advanced FlashStep", 100)
-toggle(MovePage, "Infinite FlashStep", "InfiniteFlashStep", 101)
-toggle(MovePage, "Air FlashStep (R key)", "AirFlashStep", 102)
-slider(MovePage, "Air FlashStep Range", "AirFlashStepRange", 20, 500, 103)
-
-sec(MovePage, "Dash", 104)
-toggle(MovePage, "Enable Dash Length", "DashLength", 105)
-slider(MovePage, "Dash Distance", "DashLengthValue", 10, 200, 106)
-
-sec(FarmPage, "Auto Race V3", 100)
-toggle(FarmPage, "Auto Race V3 (spam T)", "AutoRaceV3", 101)
-
-sec(FarmPage, "Auto Awakening", 102)
-toggle(FarmPage, "Enable Auto Awakening", "AutoAwakening", 103)
-
-sec(FarmPage, "Auto Gacha", 104)
-toggle(FarmPage, "Enable Auto Gacha", "AutoGacha", 105)
-
-sec(FarmPage, "Mastery Farm", 106)
-toggle(FarmPage, "Enable Mastery Farm", "MasteryFarm", 107)
-
-sec(FarmPage, "Elite Hunter", 108)
-toggle(FarmPage, "Enable Elite Hunter", "EliteHunter", 109)
-
-print("[NEXUS v1.2] Part 2/3 — Movement + Farming extensions loaded")
 -- ============================================================
---  NEXUS HUB v1.2 — Extension Pack (Part 3)
---  Visuals + Utility additions
+--  VISUALS BACKEND
 -- ============================================================
+local function makeSnow()
+    if State.SnowGui then State.SnowGui:Destroy() end
+    State.SnowGui = Instance.new("ScreenGui")
+    State.SnowGui.Name = "NEXUS_Snow"
+    State.SnowGui.IgnoreGuiInset = true
+    State.SnowGui.DisplayOrder = -1
+    pcall(function() State.SnowGui.Parent = parent end)
+    if not State.SnowGui.Parent then State.SnowGui.Parent = lp:WaitForChild("PlayerGui") end
+    local flakes = {}
+    for i = 1, 80 do
+        local f = Instance.new("Frame", State.SnowGui)
+        f.Size = UDim2.new(0, math.random(8, 15), 0, math.random(8, 15))
+        f.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        f.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        f.BackgroundTransparency = math.random(30, 60) / 100
+        f.BorderSizePixel = 0
+        Instance.new("UICorner", f).CornerRadius = UDim.new(0.5, 0)
+        flakes[#flakes+1] = {f=f, x=math.random()*100, y=math.random()*100, sp=math.random()*3+2}
+    end
+    State.SnowConn = RunService.RenderStepped:Connect(function()
+        if not State.SnowGui or not State.SnowGui.Parent then return end
+        for _, fl in ipairs(flakes) do
+            fl.y = fl.y + fl.sp / 100
+            if fl.y > 105 then fl.y = -5; fl.x = math.random() * 100 end
+            fl.f.Position = UDim2.new(fl.x / 100, 0, fl.y / 100, 0)
+        end
+    end)
+end
 
--- ============ EXTENDED CONFIG ============
-Config.PotatoGraphics = false
-Config.ShowFPS = false
-Config.ShowPing = false
-Config.ShowUptime = false
-Config.ShowServer = false
-Config.FOVValue = 70
-Config.CustomCursorId = ""
-Config.ToolColorChanger = false
-Config.ToolColor = Color3.fromRGB(255, 255, 255)
-Config.EmoteID = ""
-Config.FakeLag = false
-Config.PanicMode = false
-Config.PanicKey = Enum.KeyCode.P
-Config.Desync = false
-Config.DesyncRange = 20
+local function removeSnow()
+    if State.SnowConn then State.SnowConn:Disconnect(); State.SnowConn = nil end
+    if State.SnowGui then State.SnowGui:Destroy(); State.SnowGui = nil end
+end
 
--- ============ EXTENDED STATE ============
-State.ServerGui = nil
-State.CursorApplied = false
+local function makeRain()
+    if State.RainPart then State.RainPart:Destroy() end
+    if State.RainConn then State.RainConn:Disconnect(); State.RainConn = nil end
+    State.RainPart = Instance.new("Part")
+    State.RainPart.Name = "NEXUS_Rain"
+    State.RainPart.Size = Vector3.new(51.8, 0.001, 52)
+    State.RainPart.CanCollide = false
+    State.RainPart.Anchored = true
+    State.RainPart.Transparency = 1
+    State.RainPart.Parent = Workspace
+    local e = Instance.new("ParticleEmitter", State.RainPart)
+    e.Color = ColorSequence.new(Color3.fromRGB(200, 220, 255))
+    e.LightEmission = 1
+    e.Orientation = Enum.ParticleOrientation.FacingCameraWorldUp
+    e.Size = NumberSequence.new(0.4)
+    e.Squash = NumberSequence.new(4)
+    e.Texture = "rbxassetid://129110349"
+    e.EmissionDirection = Enum.NormalId.Bottom
+    e.Lifetime = NumberRange.new(5)
+    e.Rate = 1000
+    e.Speed = NumberRange.new(100)
+    e.LockedToPart = true
+    State.RainConn = RunService.Heartbeat:Connect(function()
+        if State.RainPart then
+            State.RainPart.CFrame = CFrame.new(camera.CFrame.Position + Vector3.new(0, 30, 0))
+        end
+    end)
+end
 
--- ============ POTATO GRAPHICS ============
+local function removeRain()
+    if State.RainConn then State.RainConn:Disconnect(); State.RainConn = nil end
+    if State.RainPart then State.RainPart:Destroy(); State.RainPart = nil end
+end
+
+function makeTrail()
+    if not State.Character then return end
+    local root = State.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    if root:FindFirstChild("NEXUS_Trail") then return end
+    local a0 = Instance.new("Attachment", root)
+    a0.Position = Vector3.new(0, 1, 0)
+    local a1 = Instance.new("Attachment", root)
+    a1.Position = Vector3.new(0, -1, 0)
+    local t = Instance.new("Trail", root)
+    t.Name = "NEXUS_Trail"
+    t.Attachment0 = a0
+    t.Attachment1 = a1
+    t.Color = ColorSequence.new(Config.TrailColor)
+    t.Lifetime = 1.6
+    t.LightEmission = 0.2
+    t.Brightness = 10
+    t.WidthScale = NumberSequence.new{NumberSequenceKeypoint.new(0, 0.1), NumberSequenceKeypoint.new(1, 0)}
+end
+
+task.spawn(function()
+    while task.wait(0.3) do
+        if Config.Snow and not State.SnowGui then makeSnow()
+        elseif not Config.Snow and State.SnowGui then removeSnow() end
+        if Config.Rain and not State.RainPart then makeRain()
+        elseif not Config.Rain and State.RainPart then removeRain() end
+        if Config.Trail and State.Character then
+            local root = State.Character:FindFirstChild("HumanoidRootPart")
+            if root and not root:FindFirstChild("NEXUS_Trail") then makeTrail() end
+        elseif not Config.Trail and State.Character then
+            local root = State.Character:FindFirstChild("HumanoidRootPart")
+            if root and root:FindFirstChild("NEXUS_Trail") then root.NEXUS_Trail:Destroy() end
+        end
+    end
+end)
+
+task.spawn(function()
+    local savedSky = nil
+    while task.wait(0.5) do
+        if Config.RemoveSkybox then
+            local sky = Lighting:FindFirstChildOfClass("Sky")
+            if sky and sky.Name ~= "NEXUS_Empty" then
+                savedSky = sky
+                sky.Parent = nil
+            end
+            if not Lighting:FindFirstChild("NEXUS_Empty") then
+                local s = Instance.new("Sky")
+                s.Name = "NEXUS_Empty"
+                s.SkyboxBk = "rbxasset://textures/sky/sky512_bk.tex"
+                s.SkyboxDn = "rbxasset://textures/sky/sky512_dn.tex"
+                s.SkyboxFt = "rbxasset://textures/sky/sky512_ft.tex"
+                s.SkyboxLf = "rbxasset://textures/sky/sky512_lf.tex"
+                s.SkyboxRt = "rbxasset://textures/sky/sky512_rt.tex"
+                s.SkyboxUp = "rbxasset://textures/sky/sky512_up.tex"
+                s.Parent = Lighting
+            end
+        else
+            local s = Lighting:FindFirstChild("NEXUS_Empty")
+            if s then s:Destroy() end
+            if savedSky and not savedSky.Parent then savedSky.Parent = Lighting; savedSky = nil end
+        end
+    end
+end)
+
+task.spawn(function()
+    local origAmbient, origOutdoor, origBrightness
+    while task.wait(0.5) do
+        if Config.Fullbright then
+            if not origAmbient then
+                origAmbient = Lighting.Ambient
+                origOutdoor = Lighting.OutdoorAmbient
+                origBrightness = Lighting.Brightness
+            end
+            Lighting.Ambient = Color3.fromRGB(255,255,255)
+            Lighting.OutdoorAmbient = Color3.fromRGB(255,255,255)
+            Lighting.Brightness = 3
+        elseif origAmbient then
+            Lighting.Ambient = origAmbient
+            Lighting.OutdoorAmbient = origOutdoor
+            Lighting.Brightness = origBrightness
+            origAmbient = nil
+        end
+    end
+end)
+
+task.spawn(function()
+    local origFogEnd, origFogStart
+    while task.wait(0.5) do
+        if Config.NoFog then
+            if not origFogEnd then
+                origFogEnd = Lighting.FogEnd
+                origFogStart = Lighting.FogStart
+            end
+            Lighting.FogEnd = 9e9
+            Lighting.FogStart = 9e9
+        elseif origFogEnd then
+            Lighting.FogEnd = origFogEnd
+            Lighting.FogStart = origFogStart
+            origFogEnd = nil
+        end
+    end
+end)
+
 task.spawn(function()
     local saved = {}
     while task.wait(0.5) do
@@ -1089,16 +1688,135 @@ task.spawn(function()
     end
 end)
 
--- ============ SERVER STATS HUD ============
+task.spawn(function()
+    while task.wait(0.5) do
+        if camera and camera.FieldOfView ~= Config.FOVValue then
+            camera.FieldOfView = Config.FOVValue
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(0.2) do
+        if (Config.HitEffects or Config.DamageNumbers) and State.Character then
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= lp and p.Character then
+                    local hum = p.Character:FindFirstChildOfClass("Humanoid")
+                    local head = p.Character:FindFirstChild("Head")
+                    local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+                    if hum and hrp then
+                        local last = State.LastDamage[p]
+                        if last and hum.Health < last and head then
+                            local diff = math.floor(last - hum.Health)
+                            if Config.HitEffects then
+                                local att = Instance.new("Attachment", hrp)
+                                local e = Instance.new("ParticleEmitter", att)
+                                e.Texture = "rbxassetid://4509687978"
+                                e.Color = ColorSequence.new(Config.HitEffectsColor)
+                                e.Rate = 0
+                                e.Lifetime = NumberRange.new(0.5)
+                                e.Speed = NumberRange.new(20, 30)
+                                e.Size = NumberSequence.new(1)
+                                e.SpreadAngle = Vector2.new(360, 360)
+                                e:Emit(15)
+                                task.delay(1, function() att:Destroy() end)
+                            end
+                            if Config.DamageNumbers then
+                                local gui = Instance.new("BillboardGui")
+                                gui.Size = UDim2.new(0, 100, 0, 40)
+                                gui.StudsOffset = Vector3.new(0, 2, 0)
+                                gui.AlwaysOnTop = true
+                                gui.Parent = head
+                                local lbl = Instance.new("TextLabel", gui)
+                                lbl.Size = UDim2.new(1, 0, 1, 0)
+                                lbl.BackgroundTransparency = 1
+                                lbl.Text = "-" .. diff
+                                lbl.TextColor3 = Color3.fromRGB(255, 80, 80)
+                                lbl.TextStrokeTransparency = 0
+                                lbl.Font = Enum.Font.GothamBold
+                                lbl.TextSize = 20
+                                task.delay(1, function() gui:Destroy() end)
+                            end
+                        end
+                        State.LastDamage[p] = hum.Health
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- ============================================================
+--  UTILITY BACKEND
+-- ============================================================
+task.spawn(function()
+    local orig = Workspace.FallenPartsDestroyHeight
+    while task.wait(0.5) do
+        if Config.AntiVoid then
+            Workspace.FallenPartsDestroyHeight = -math.huge
+        elseif Workspace.FallenPartsDestroyHeight == -math.huge then
+            Workspace.FallenPartsDestroyHeight = orig
+        end
+    end
+end)
+
+task.spawn(function()
+    while task.wait(1) do
+        if Config.FPSUnlocker then
+            pcall(function() if has.setfpscap then setfpscap(9999) end end)
+        end
+    end
+end)
+
+lp.Idled:Connect(function()
+    if Config.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
 task.spawn(function()
     if State.ServerGui then State.ServerGui:Destroy() end
     State.ServerGui = Instance.new("ScreenGui")
-    State.ServerGui.Name = "NEXUS_ServerStats"
+    State.ServerGui.Name = "NEXUS_ServerInfo"
     State.ServerGui.ResetOnSpawn = false
     pcall(function() State.ServerGui.Parent = parent end)
     if not State.ServerGui.Parent then State.ServerGui.Parent = lp:WaitForChild("PlayerGui") end
 
-    local frame = Instance.new("Frame", State.ServerGui)
+    local lbl = Instance.new("TextLabel", State.ServerGui)
+    lbl.Size = UDim2.new(0, 240, 0, 60)
+    lbl.Position = UDim2.new(1, -260, 0, 60)
+    lbl.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
+    lbl.BackgroundTransparency = 0.2
+    lbl.BorderSizePixel = 0
+    lbl.TextColor3 = Config.Theme
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 10
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextYAlignment = Enum.TextYAlignment.Top
+    Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 8)
+
+    while task.wait(1) do
+        if Config.ServerInfo then
+            lbl.Visible = true
+            local players = #Players:GetPlayers()
+            local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            local job = game.JobId:sub(1, 8) .. "..."
+            lbl.Text = ("Server Info\nPlayers: %d | Ping: %d ms\nJob: %s"):format(players, ping, job)
+        else
+            lbl.Visible = false
+        end
+    end
+end)
+
+task.spawn(function()
+    local hudGui = Instance.new("ScreenGui")
+    hudGui.Name = "NEXUS_HUD"
+    hudGui.ResetOnSpawn = false
+    pcall(function() hudGui.Parent = parent end)
+    if not hudGui.Parent then hudGui.Parent = lp:WaitForChild("PlayerGui") end
+
+    local frame = Instance.new("Frame", hudGui)
     frame.Size = UDim2.new(0, 200, 0, 90)
     frame.Position = UDim2.new(0, 20, 0, 60)
     frame.BackgroundColor3 = Color3.fromRGB(12, 12, 16)
@@ -1116,25 +1834,27 @@ task.spawn(function()
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.TextYAlignment = Enum.TextYAlignment.Top
 
+    local fpsCounter, fpsTime = 0, tick()
+    RunService.RenderStepped:Connect(function()
+        fpsCounter += 1
+        if tick() - fpsTime >= 1 then
+            frame:SetAttribute("FPS", fpsCounter)
+            fpsCounter = 0
+            fpsTime = tick()
+        end
+    end)
+
     while task.wait(0.5) do
         if Config.ShowFPS or Config.ShowPing or Config.ShowUptime or Config.ShowServer then
             frame.Visible = true
             local lines = {}
-            if Config.ShowFPS then
-                lines[#lines+1] = ("FPS: %d"):format(math.floor(1 / RunService.RenderStepped:Wait()))
-            end
-            if Config.ShowPing then
-                local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-                lines[#lines+1] = ("Ping: %d ms"):format(ping)
-            end
+            if Config.ShowFPS then lines[#lines+1] = ("FPS: %d"):format(frame:GetAttribute("FPS") or 0) end
+            if Config.ShowPing then lines[#lines+1] = ("Ping: %d ms"):format(math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())) end
             if Config.ShowUptime then
                 local t = Workspace.DistributedGameTime
-                lines[#lines+1] = ("Uptime: %02d:%02d:%02d"):format(
-                    math.floor(t/3600), math.floor((t%3600)/60), math.floor(t%60))
+                lines[#lines+1] = ("Uptime: %02d:%02d:%02d"):format(math.floor(t/3600), math.floor((t%3600)/60), math.floor(t%60))
             end
-            if Config.ShowServer then
-                lines[#lines+1] = ("Server: %s"):format(game.JobId:sub(1, 8))
-            end
+            if Config.ShowServer then lines[#lines+1] = ("Server: %s"):format(game.JobId:sub(1, 8)) end
             lbl.Text = table.concat(lines, "\n")
         else
             frame.Visible = false
@@ -1142,26 +1862,13 @@ task.spawn(function()
     end
 end)
 
--- ============ FOV CHANGER ============
-task.spawn(function()
-    while task.wait(0.5) do
-        if camera and camera.FieldOfView ~= Config.FOVValue then
-            camera.FieldOfView = Config.FOVValue
-        end
-    end
-end)
-
--- ============ CUSTOM CURSOR ============
 task.spawn(function()
     while task.wait(1) do
         if Config.CustomCursorId ~= "" and not State.CursorApplied then
             pcall(function()
-                local mouse = lp:GetMouse()
-                if tonumber(Config.CustomCursorId) then
-                    mouse.Icon = "rbxassetid://" .. Config.CustomCursorId
-                else
-                    mouse.Icon = Config.CustomCursorId
-                end
+                local m = lp:GetMouse()
+                if tonumber(Config.CustomCursorId) then m.Icon = "rbxassetid://" .. Config.CustomCursorId
+                else m.Icon = Config.CustomCursorId end
                 State.CursorApplied = true
             end)
         elseif Config.CustomCursorId == "" and State.CursorApplied then
@@ -1171,17 +1878,14 @@ task.spawn(function()
     end
 end)
 
--- ============ TOOL COLOR CHANGER ============
 task.spawn(function()
     while task.wait(0.5) do
         if Config.ToolColorChanger and State.Character then
             for _, v in ipairs(State.Character:GetDescendants()) do
                 if v:IsA("BasePart") then
-                    local parent = v.Parent
-                    if parent and parent:IsA("Tool") then
-                        if not v:GetAttribute("NEXUS_OrigColor") then
-                            v:SetAttribute("NEXUS_OrigColor", v.Color)
-                        end
+                    local p = v.Parent
+                    if p and p:IsA("Tool") then
+                        if not v:GetAttribute("NEXUS_OrigColor") then v:SetAttribute("NEXUS_OrigColor", v.Color) end
                         v.Color = Config.ToolColor
                     end
                 end
@@ -1190,7 +1894,6 @@ task.spawn(function()
     end
 end)
 
--- ============ EMOTE PLAYER ============
 task.spawn(function()
     while task.wait(0.5) do
         if Config.EmoteID ~= "" and State.Humanoid then
@@ -1207,78 +1910,42 @@ task.spawn(function()
     end
 end)
 
--- ============ FAKE LAG ============
 task.spawn(function()
     while task.wait(0.05) do
         if Config.FakeLag and State.Root then
-            local orig = State.Root.CFrame
-            State.Root.Anchored = true
+            local orig = State.Root.CFrame            State.Root.Anchored = true
             task.wait(0.2)
-            if State.Root then
-                State.Root.Anchored = false
-                State.Root.CFrame = orig
-            end
+            if State.Root then State.Root.Anchored = false; State.Root.CFrame = orig end
         end
     end
 end)
 
--- ============ PANIC MODE ============
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if Config.PanicMode and input.KeyCode == Config.PanicKey then
         if State.Root and State.Humanoid then
             State.Humanoid.PlatformStand = true
             for i = 1, 50 do
-                State.Root.CFrame = State.Root.CFrame + Vector3.new(0, 500, 0)
+                if State.Root then State.Root.CFrame = State.Root.CFrame + Vector3.new(0, 500, 0) end
                 task.wait(0.02)
             end
         end
     end
 end)
 
--- ============ DESYNC ============
 task.spawn(function()
     while task.wait(0.05) do
         if Config.Desync and State.Root then
             local offset = Vector3.new(
-                math.random(-Config.DesyncRange, Config.DesyncRange),
-                0,
-                math.random(-Config.DesyncRange, Config.DesyncRange)
-            )
+                math.random(-Config.DesyncRange, Config.DesyncRange), 0,
+                math.random(-Config.DesyncRange, Config.DesyncRange))
             State.Root.CFrame = State.Root.CFrame + offset
         end
     end
 end)
 
--- ============ UI: EXTENSION ADDITIONS ============
-local VisPage = Pages.Visuals
-local UtilPage = Pages.Utility
-
-sec(VisPage, "Graphics", 100)
-toggle(VisPage, "Potato Graphics (FPS boost)", "PotatoGraphics", 101)
-slider(VisPage, "Field of View", "FOVValue", 20, 120, 102)
-
-sec(VisPage, "HUD", 103)
-toggle(VisPage, "Show FPS", "ShowFPS", 104)
-toggle(VisPage, "Show Ping", "ShowPing", 105)
-toggle(VisPage, "Show Uptime", "ShowUptime", 106)
-toggle(VisPage, "Show Server", "ShowServer", 107)
-
-sec(VisPage, "Cursor", 108)
-input(VisPage, "Custom Cursor ID", "CustomCursorId", 109, "assetid")
-
-sec(VisPage, "Tool Color", 110)
-toggle(VisPage, "Enable Tool Color", "ToolColorChanger", 111)
-
-sec(VisPage, "Emote", 112)
-input(VisPage, "Emote ID", "EmoteID", 113, "assetid")
-
-sec(UtilPage, "Fake Lag", 100)
-toggle(UtilPage, "Enable Fake Lag", "FakeLag", 101)
-
-sec(UtilPage, "Panic Mode", 102)
-toggle(UtilPage, "Enable Panic Mode", "PanicMode", 103)
-
-sec(UtilPage, "Desync", 104)
-toggle(UtilPage, "Enable Desync", "Desync", 105)
-slider(UtilPage, "Desync Range", "DesyncRange", 5, 100, 106)
+-- ============================================================
+--  STARTUP
+-- ============================================================
+print("[NEXUS v1.3] Full build loaded — ~50 features active")
+print("[NEXUS v1.3] Combat · Movement · Farming · Visuals · Utility ready")
