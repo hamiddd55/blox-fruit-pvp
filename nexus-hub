@@ -1282,6 +1282,3 @@ toggle(UtilPage, "Enable Panic Mode", "PanicMode", 103)
 sec(UtilPage, "Desync", 104)
 toggle(UtilPage, "Enable Desync", "Desync", 105)
 slider(UtilPage, "Desync Range", "DesyncRange", 5, 100, 106)
-
-print("[NEXUS v1.2] Part 3/3 — Visuals + Utility extensions loaded")
-print("[NEXUS v1.2] Total: 25+ features active")
