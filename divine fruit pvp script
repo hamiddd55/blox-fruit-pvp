@@ -1,0 +1,60 @@
+-- =========================================================
+-- [10] FAST ATTACK FRUIT
+-- =========================================================
+local function StartFruitAttack()
+    if FruitAttackConnection then FruitAttackConnection:Disconnect() end
+    FruitAttackConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().FruitAttack then
+            FruitAttackConnection:Disconnect()
+            FruitAttackConnection = nil
+            return
+        end
+        pcall(function()
+            local targetPlayer = GetNearestPlayer()
+            if not (targetPlayer and targetPlayer.Character) then return end
+            local char = lp.Character
+            local myHRP = char and char:FindFirstChild("HumanoidRootPart")
+            local tHRP = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local tHum = targetPlayer.Character:FindFirstChild("Humanoid")
+            if not (myHRP and tHRP and tHum and tHum.Health > 0) then return end
+            local direction = (tHRP.Position - myHRP.Position).Unit
+            FireEquippedFruit(direction, char)
+            local head = targetPlayer.Character:FindFirstChild("Head")
+            if head then
+                RegisterAttack:FireServer(0)
+                RegisterHit:FireServer(head, {{targetPlayer.Character, head}})
+            end
+        end)
+    end)
+end
+
+local function StopFruitAttack()
+    if FruitAttackConnection then
+        FruitAttackConnection:Disconnect()
+        FruitAttackConnection = nil
+    end
+end
+-- =========================================================
+-- [14] RAYFIELD GUI
+-- =========================================================
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "SASING HUB | ♥️KRL♥️",
+    LoadingTitle = "SASING HUB SYSTEM",
+    LoadingSubtitle = "by Abdiel",
+    Theme = "Dark",
+    DisableRayfieldPrompts = false,
+    DisableBuildWarnings = false,
+    ConfigurationSaving = {Enabled = false},
+    KeySystem = false
+})
+
+Rayfield:Notify({
+    Title = "✅ Sasing Hub Cargado!",
+    Content = "SISTEMA INICIADO CORRECTAMENTE",
+    Duration = 5,
+    Image = 4483362458,
+})
+
+Rayfield:LoadConfiguration()
