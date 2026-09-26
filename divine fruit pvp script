@@ -1,3 +1,63 @@
+--[[
+    SASING HUB | AUTOMATION UPDATE
+    Developer: Abdiel
+    Architecture: Clean & Optimized
+--]]
+
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local lp = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+-- =========================================================
+-- [9] FAST ATTACK
+-- =========================================================
+local function StartFastAttack()
+    if FastAttackConnection then task.cancel(FastAttackConnection) end
+    FastAttackConnection = task.spawn(function()
+        while getgenv().FastAttackEnabled do
+            task.wait(0.01)
+            local myChar = lp.Character
+            local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+            if not myHRP then continue end
+            local targetsInRange = {}
+            local currentRange = getgenv().FastAttackRange
+            for _, player in pairs(Players:GetPlayers()) do
+                if player ~= lp and player.Character then
+                    local hum = player.Character:FindFirstChild("Humanoid")
+                    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+                    if hum and hrp and hum.Health > 0 then
+                        if (hrp.Position - myHRP.Position).Magnitude <= currentRange then
+                            table.insert(targetsInRange, player.Character)
+                        end
+                    end
+                end
+            end
+            local enemiesFolder = workspace:FindFirstChild("Enemies")
+            if enemiesFolder then
+                for _, npc in pairs(enemiesFolder:GetChildren()) do
+                    local hum = npc:FindFirstChild("Humanoid")
+                    local hrp = npc:FindFirstChild("HumanoidRootPart")
+                    if hum and hrp and hum.Health > 0 then
+                        if (hrp.Position - myHRP.Position).Magnitude <= currentRange then
+                            table.insert(targetsInRange, npc)
+                        end
+                    end
+                end
+            end
+            if #targetsInRange > 0 then AttackMultipleTargets(targetsInRange) end
+        end
+    end)
+end
+
+local function StopFastAttack()
+    if FastAttackConnection then task.cancel(FastAttackConnection) FastAttackConnection = nil end
+end
+
 -- =========================================================
 -- [10] FAST ATTACK FRUIT
 -- =========================================================
@@ -55,6 +115,4 @@ Rayfield:Notify({
     Content = "SISTEMA INICIADO CORRECTAMENTE",
     Duration = 5,
     Image = 4483362458,
-})
-
-Rayfield:LoadConfiguration()
+}
