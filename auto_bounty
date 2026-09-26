@@ -1,8 +1,11 @@
 --[[
-    SASING HUB | AFK AUTO MODE
-    - Runs everything on execute
-    - No UI required (still has one for control)
-    - Auto server hop every 40s
+    SASING HUB | AFK FULL AUTO — FINAL
+    - Auto Team Select (Pirates) on execute + after every hop
+    - Auto Equip Fruit
+    - Fruit Fast Attack
+    - TP to Players Loop (0.5s per player)
+    - Auto Server Hop every 40s
+    - All runs automatically — no button needed
 --]]
 
 -- ═══════════════════════════════════════════════════════════
@@ -16,13 +19,15 @@ local HttpService        = game:GetService("HttpService")
 local lp                 = Players.LocalPlayer
 
 -- ═══════════════════════════════════════════════════════════
--- AUTO-EXECUTE FLAGS
+-- CONFIG
 -- ═══════════════════════════════════════════════════════════
-getgenv().SASING_AFK_MODE     = true
-getgenv().SASING_HOP_INTERVAL = 40      -- ثواني
-getgenv().SASING_FRUIT_DELAY  = 0.15
-getgenv().SASING_TP_STICK     = 2
-getgenv().SASING_TEAM_CHECK   = false
+getgenv().SASING_AFK_MODE       = true
+getgenv().SASING_HOP_INTERVAL   = 40
+getgenv().SASING_FRUIT_DELAY    = 0.15
+getgenv().SASING_TP_STICK       = 0.5      -- ✅ 0.5 ثانية
+getgenv().SASING_TEAM_CHECK     = false
+getgenv().SASING_AUTO_TEAM      = true
+getgenv().SASING_PREFERRED_TEAM = "Pirates"
 
 -- ═══════════════════════════════════════════════════════════
 -- NET REMOTES
@@ -43,6 +48,7 @@ local FruitAttackConnection = nil
 local TPLoopThread          = nil
 local AutoHopThread         = nil
 local AutoEquipThread       = nil
+local AutoTeamThread        = nil
 
 -- ═══════════════════════════════════════════════════════════
 -- HELPERS
@@ -57,11 +63,11 @@ local function isFruit(tool)
     if tool.ToolTip == "Blox Fruit" then return true end
     if tool.Name:lower():find("fruit") then return true end
     local fruitNames = {
-        "dough", "dragon", "kitsune", "leopard", "venom", "control",
-        "spirit", "shadow", "buddha", "rumble", "portal", "pain",
-        "blizzard", "gravity", "mammoth", "tiger", "t-rex", "gas",
-        "yeti", "sound", "phoenix", "magma", "ice", "light", "dark",
-        "flame", "sand", "bomb", "spike", "spring", "chop", "smoke"
+        "dough","dragon","kitsune","leopard","venom","control",
+        "spirit","shadow","buddha","rumble","portal","pain",
+        "blizzard","gravity","mammoth","tiger","t-rex","gas",
+        "yeti","sound","phoenix","magma","ice","light","dark",
+        "flame","sand","bomb","spike","spring","chop","smoke"
     }
     for _, f in ipairs(fruitNames) do
         if tool.Name:lower():find(f) then return true end
@@ -88,6 +94,49 @@ local function autoEquipFruit()
     end
 end
 
+-- ═══════════════════════════════════════════════════════════
+-- AUTO TEAM
+-- ═══════════════════════════════════════════════════════════
+local function selectTeam(teamName)
+    pcall(function()
+        if lp.Team and lp.Team.Name ~= "" then
+            print("[SASING] Already in team:", lp.Team.Name)
+            return
+        end
+
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        local commF = remotes and remotes:FindFirstChild("CommF_")
+        if commF then
+            pcall(function() commF:InvokeServer("SetTeam", teamName) end)
+            print("[SASING] Team set:", teamName)
+        end
+    end)
+end
+
+local function StartAutoTeam()
+    if AutoTeamThread then task.cancel(AutoTeamThread) end
+
+    AutoTeamThread = task.spawn(function()
+        task.wait(2)
+        if not getgenv().SASING_AUTO_TEAM then return end
+        selectTeam(getgenv().SASING_PREFERRED_TEAM)
+
+        for i = 1, 12 do
+            task.wait(5)
+            if not getgenv().SASING_AUTO_TEAM then return end
+
+            if lp.Team and lp.Team.Name ~= "" then
+                print("[SASING] Team confirmed:", lp.Team.Name)
+                return
+            end
+            selectTeam(getgenv().SASING_PREFERRED_TEAM)
+        end
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- FRUIT ATTACK
+-- ═══════════════════════════════════════════════════════════
 local function GetNearestPlayer()
     local myHRP = getRoot()
     if not myHRP then return nil end
@@ -135,9 +184,6 @@ local function FireEquippedFruit(direction, char)
     end)
 end
 
--- ═══════════════════════════════════════════════════════════
--- SYSTEMS
--- ═══════════════════════════════════════════════════════════
 local function StartFruitAttack()
     if FruitAttackConnection then FruitAttackConnection:Disconnect() end
     FruitAttackConnection = RunService.Heartbeat:Connect(function()
@@ -178,6 +224,9 @@ local function StartAutoEquip()
     end)
 end
 
+-- ═══════════════════════════════════════════════════════════
+-- TP LOOP (0.5s per player)
+-- ═══════════════════════════════════════════════════════════
 local function GetPlayerTargets()
     local list = {}
     for _, p in ipairs(Players:GetPlayers()) do
@@ -226,7 +275,7 @@ local function StartTPLoop()
 end
 
 -- ═══════════════════════════════════════════════════════════
--- AUTO HOP (40s)
+-- AUTO HOP
 -- ═══════════════════════════════════════════════════════════
 local function hopServer()
     pcall(function()
@@ -253,7 +302,7 @@ local function StartAutoHop()
             if getgenv().SASING_AFK_MODE then
                 print("[SASING] Hopping...")
                 hopServer()
-                break -- بعد الهوب يوقف (يعاد تشغيله بعد اللود)
+                break
             end
         end
     end)
@@ -264,7 +313,12 @@ end
 -- ═══════════════════════════════════════════════════════════
 local function StartEverything()
     getgenv().SASING_AFK_MODE = true
-    task.wait(2) -- انتظر تحميل الشخصية
+    task.wait(2)
+
+    print("[SASING] Starting Auto Team...")
+    StartAutoTeam()
+
+    task.wait(4)
 
     autoEquipFruit()
     StartFruitAttack()
@@ -272,22 +326,26 @@ local function StartEverything()
     StartTPLoop()
     StartAutoHop()
 
-    print("[SASING] AFK MODE ON — All systems running")
-    print("[SASING] Next hop in " .. getgenv().SASING_HOP_INTERVAL .. "s")
+    print("[SASING] ✅ ALL SYSTEMS ON")
+    print("[SASING] Team:", getgenv().SASING_PREFERRED_TEAM)
+    print("[SASING] TP Stick:", getgenv().SASING_TP_STICK, "s")
+    print("[SASING] Next hop in", getgenv().SASING_HOP_INTERVAL, "s")
 end
 
 -- ═══════════════════════════════════════════════════════════
--- RESPAWN HANDLER (يعيد التشغيل بعد كل hop/death)
+-- RESPAWN HANDLER
 -- ═══════════════════════════════════════════════════════════
 lp.CharacterAdded:Connect(function()
     task.wait(3)
     if getgenv().SASING_AFK_MODE then
+        print("[SASING] Re-init after respawn/hop")
+        StartAutoTeam()
+        task.wait(3)
         autoEquipFruit()
         StartFruitAttack()
         StartAutoEquip()
         StartTPLoop()
         StartAutoHop()
-        print("[SASING] Re-enabled after respawn/hop")
     end
 end)
 
@@ -300,26 +358,27 @@ task.spawn(function()
 end)
 
 -- ═══════════════════════════════════════════════════════════
--- OPTIONAL: MINIMAL UI (if you want to stop it)
+-- UI
 -- ═══════════════════════════════════════════════════════════
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "SASING AFK MODE",
-    LoadingTitle = "AFK Mode",
-    LoadingSubtitle = "Auto-running",
+    Name = "SASING HUB | AFK FULL AUTO",
+    LoadingTitle = "SASING HUB",
+    LoadingSubtitle = "Full Auto Mode",
     Theme = "Dark",
     ConfigurationSaving = {Enabled = false},
     KeySystem = false
 })
 
 Rayfield:Notify({
-    Title = "🤖 AFK MODE ON",
-    Content = "All systems running. Hop every 40s.",
+    Title = "🤖 AFK FULL AUTO ON",
+    Content = "Team: Pirates | TP: 0.5s | Hop: 40s",
     Duration = 6,
 })
 
 local Tab = Window:CreateTab("Control 🎮", 4483362458)
+
 Tab:CreateSection("Master")
 
 Tab:CreateToggle({
@@ -329,6 +388,7 @@ Tab:CreateToggle({
     Callback = function(v)
         getgenv().SASING_AFK_MODE = v
         if v then
+            StartAutoTeam()
             autoEquipFruit()
             StartFruitAttack()
             StartAutoEquip()
@@ -339,9 +399,26 @@ Tab:CreateToggle({
             if TPLoopThread then task.cancel(TPLoopThread) end
             if AutoHopThread then task.cancel(AutoHopThread) end
             if AutoEquipThread then task.cancel(AutoEquipThread) end
+            if AutoTeamThread then task.cancel(AutoTeamThread) end
         end
     end,
 })
+
+Tab:CreateSection("Auto Team")
+
+Tab:CreateDropdown({
+    Name = "🏴 Choose Team",
+    Options = {"Pirates", "Marines"},
+    CurrentOption = {"Pirates"},
+    MultipleOptions = false,
+    Flag = "AFK_TeamChoice",
+    Callback = function(opt)
+        if type(opt) == "table" then opt = opt[1] end
+        getgenv().SASING_PREFERRED_TEAM = opt
+    end,
+})
+
+Tab:CreateSection("Settings")
 
 Tab:CreateSlider({
     Name = "🔄 Hop Interval (sec)",
@@ -351,10 +428,26 @@ Tab:CreateSlider({
     Flag = "AFK_HopInterval",
     Callback = function(v)
         getgenv().SASING_HOP_INTERVAL = v
-        if getgenv().SASING_AFK_MODE then
-            StartAutoHop()
-        end
+        if getgenv().SASING_AFK_MODE then StartAutoHop() end
     end,
+})
+
+Tab:CreateSlider({
+    Name = "⏱️ Fruit Attack Delay",
+    Range = {0.05, 0.5},
+    Increment = 0.05,
+    CurrentValue = 0.15,
+    Flag = "AFK_FruitDelay",
+    Callback = function(v) getgenv().SASING_FRUIT_DELAY = v end,
+})
+
+Tab:CreateSlider({
+    Name = "🌀 TP Stick (sec)",
+    Range = {0.1, 10},
+    Increment = 0.1,
+    CurrentValue = 0.5,
+    Flag = "AFK_TPStick",
+    Callback = function(v) getgenv().SASING_TP_STICK = v end,
 })
 
 Rayfield:LoadConfiguration()
