@@ -1,11 +1,12 @@
 --[[
-    SASING HUB | AFK FULL AUTO — FINAL
-    - Auto Team Select (Pirates) on execute + after every hop
+    SASING HUB | AFK FULL AUTO — FINAL + TP NPCs
+    - Auto Team Select (Pirates)
     - Auto Equip Fruit
     - Fruit Fast Attack
-    - TP to Players Loop (0.5s per player)
+    - TP to Players Loop (0.5s)
+    - Auto TP to All NPCs (toggle)
     - Auto Server Hop every 40s
-    - All runs automatically — no button needed
+    - Auto Re-Execute (Recursive)
 --]]
 
 -- ═══════════════════════════════════════════════════════════
@@ -24,10 +25,17 @@ local lp                 = Players.LocalPlayer
 getgenv().SASING_AFK_MODE       = true
 getgenv().SASING_HOP_INTERVAL   = 40
 getgenv().SASING_FRUIT_DELAY    = 0.15
-getgenv().SASING_TP_STICK       = 0.5      -- ✅ 0.5 ثانية
+getgenv().SASING_TP_STICK       = 0.5
 getgenv().SASING_TEAM_CHECK     = false
 getgenv().SASING_AUTO_TEAM      = true
 getgenv().SASING_PREFERRED_TEAM = "Pirates"
+
+-- ✅ TP NPCs config
+getgenv().SASING_TP_NPCS        = false
+getgenv().SASING_TP_NPC_DELAY   = 0.5
+getgenv().SASING_TP_NPC_RANGE   = 5000
+
+local SCRIPT_URL = "https://raw.githubusercontent.com/hamiddd55/blox-fruit-pvp/refs/heads/main/auto_bounty"
 
 -- ═══════════════════════════════════════════════════════════
 -- NET REMOTES
@@ -49,6 +57,7 @@ local TPLoopThread          = nil
 local AutoHopThread         = nil
 local AutoEquipThread       = nil
 local AutoTeamThread        = nil
+local AutoTPNPCThread       = nil   -- ✅ جديد
 
 -- ═══════════════════════════════════════════════════════════
 -- HELPERS
@@ -225,7 +234,7 @@ local function StartAutoEquip()
 end
 
 -- ═══════════════════════════════════════════════════════════
--- TP LOOP (0.5s per player)
+-- TP LOOP (Players)
 -- ═══════════════════════════════════════════════════════════
 local function GetPlayerTargets()
     local list = {}
@@ -272,6 +281,75 @@ local function StartTPLoop()
             end
         end
     end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- ✅ AUTO TP TO ALL NPCs
+-- ═══════════════════════════════════════════════════════════
+local function GetAllNPCs()
+    local list = {}
+    local enemies = workspace:FindFirstChild("Enemies")
+    if enemies then
+        for _, npc in ipairs(enemies:GetChildren()) do
+            if npc:IsA("Model") then
+                local hum = npc:FindFirstChildOfClass("Humanoid")
+                local hrp = npc:FindFirstChild("HumanoidRootPart")
+                if hum and hrp and hum.Health > 0 then
+                    list[#list+1] = {model = npc, hrp = hrp, hum = hum}
+                end
+            end
+        end
+    end
+    return list
+end
+
+local function StartAutoTPNPCs()
+    if AutoTPNPCThread then task.cancel(AutoTPNPCThread) end
+
+    AutoTPNPCThread = task.spawn(function()
+        while getgenv().SASING_TP_NPCS do
+            local npcs = GetAllNPCs()
+            local myRoot = getRoot()
+
+            if not myRoot then
+                task.wait(0.5)
+                continue
+            end
+
+            if #npcs == 0 then
+                task.wait(0.5)
+            else
+                for _, t in ipairs(npcs) do
+                    if not getgenv().SASING_TP_NPCS then break end
+                    if not t.hrp or not t.hrp.Parent then continue end
+                    if not t.hum or t.hum.Health <= 0 then continue end
+
+                    local root = getRoot()
+                    if root then
+                        root.CFrame = CFrame.new(t.hrp.Position + Vector3.new(0, 3, 0))
+                        root.Velocity = Vector3.zero
+                    end
+
+                    local endTime = tick() + getgenv().SASING_TP_NPC_DELAY
+                    while tick() < endTime and getgenv().SASING_TP_NPCS do
+                        local root2 = getRoot()
+                        if root2 and t.hrp and t.hrp.Parent then
+                            root2.CFrame = CFrame.new(t.hrp.Position + Vector3.new(0, 3, 0))
+                            root2.Velocity = Vector3.zero
+                        end
+                        task.wait(0.05)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function StopAutoTPNPCs()
+    if AutoTPNPCThread then
+        task.cancel(AutoTPNPCThread)
+        AutoTPNPCThread = nil
+    end
 end
 
 -- ═══════════════════════════════════════════════════════════
@@ -326,9 +404,15 @@ local function StartEverything()
     StartTPLoop()
     StartAutoHop()
 
+    -- ✅ شغّل TP NPCs لو مفعّل
+    if getgenv().SASING_TP_NPCS then
+        StartAutoTPNPCs()
+    end
+
     print("[SASING] ✅ ALL SYSTEMS ON")
     print("[SASING] Team:", getgenv().SASING_PREFERRED_TEAM)
     print("[SASING] TP Stick:", getgenv().SASING_TP_STICK, "s")
+    print("[SASING] TP NPCs:", getgenv().SASING_TP_NPCS and "ON" or "OFF")
     print("[SASING] Next hop in", getgenv().SASING_HOP_INTERVAL, "s")
 end
 
@@ -346,6 +430,7 @@ lp.CharacterAdded:Connect(function()
         StartAutoEquip()
         StartTPLoop()
         StartAutoHop()
+        if getgenv().SASING_TP_NPCS then StartAutoTPNPCs() end
     end
 end)
 
@@ -355,6 +440,34 @@ end)
 task.spawn(function()
     print("[SASING] Script loaded — starting in 2s...")
     StartEverything()
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- AUTO RE-EXECUTE (Recursive)
+-- ═══════════════════════════════════════════════════════════
+task.spawn(function()
+    task.wait(5)
+
+    if not queue_on_teleport then
+        print("[SASING] ⚠️ queue_on_teleport not supported")
+        print("[SASING] → استخدم Auto Execute في إعدادات الـ executor")
+        return
+    end
+
+    local reloadCode = string.format([[
+        task.wait(8)
+        local ok, err = pcall(function()
+            loadstring(game:HttpGet("%s"))()
+        end)
+        if not ok then
+            warn("[SASING] Reload failed:", err)
+        end
+    ]], SCRIPT_URL)
+
+    pcall(function()
+        queue_on_teleport(reloadCode)
+    end)
+    print("[SASING] ✅ Auto Re-Execute queued (recursive)")
 end)
 
 -- ═══════════════════════════════════════════════════════════
@@ -373,7 +486,7 @@ local Window = Rayfield:CreateWindow({
 
 Rayfield:Notify({
     Title = "🤖 AFK FULL AUTO ON",
-    Content = "Team: Pirates | TP: 0.5s | Hop: 40s",
+    Content = "Team: Pirates | TP: 0.5s | Hop: 40s | NPCs: Ready",
     Duration = 6,
 })
 
@@ -394,12 +507,14 @@ Tab:CreateToggle({
             StartAutoEquip()
             StartTPLoop()
             StartAutoHop()
+            if getgenv().SASING_TP_NPCS then StartAutoTPNPCs() end
         else
             if FruitAttackConnection then FruitAttackConnection:Disconnect() end
             if TPLoopThread then task.cancel(TPLoopThread) end
             if AutoHopThread then task.cancel(AutoHopThread) end
             if AutoEquipThread then task.cancel(AutoEquipThread) end
             if AutoTeamThread then task.cancel(AutoTeamThread) end
+            if AutoTPNPCThread then task.cancel(AutoTPNPCThread) end
         end
     end,
 })
@@ -418,6 +533,43 @@ Tab:CreateDropdown({
     end,
 })
 
+-- ✅ قسم TP NPCs
+Tab:CreateSection("Auto TP to NPCs")
+
+Tab:CreateToggle({
+    Name = "🤖 Auto TP to All NPCs",
+    CurrentValue = false,
+    Flag = "AFK_TP_NPCs",
+    Callback = function(v)
+        getgenv().SASING_TP_NPCS = v
+        if v then
+            StartAutoTPNPCs()
+            Rayfield:Notify({
+                Title = "🤖 TP NPCs",
+                Content = "Auto TP to NPCs = ON",
+                Duration = 3
+            })
+        else
+            StopAutoTPNPCs()
+            Rayfield:Notify({
+                Title = "🛑 TP NPCs",
+                Content = "Auto TP to NPCs = OFF",
+                Duration = 3
+            })
+        end
+    end,
+})
+
+Tab:CreateSlider({
+    Name = "⏱️ Stay on each NPC (sec)",
+    Range = {0.1, 5},
+    Increment = 0.1,
+    CurrentValue = 0.5,
+    Flag = "AFK_TP_NPC_Delay",
+    Callback = function(v) getgenv().SASING_TP_NPC_DELAY = v end,
+})
+
+-- Settings
 Tab:CreateSection("Settings")
 
 Tab:CreateSlider({
