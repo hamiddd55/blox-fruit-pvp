@@ -1,0 +1,360 @@
+--[[
+    SASING HUB | AFK AUTO MODE
+    - Runs everything on execute
+    - No UI required (still has one for control)
+    - Auto server hop every 40s
+--]]
+
+-- ═══════════════════════════════════════════════════════════
+-- SERVICES
+-- ═══════════════════════════════════════════════════════════
+local Players            = game:GetService("Players")
+local RunService         = game:GetService("RunService")
+local ReplicatedStorage  = game:GetService("ReplicatedStorage")
+local TeleportService    = game:GetService("TeleportService")
+local HttpService        = game:GetService("HttpService")
+local lp                 = Players.LocalPlayer
+
+-- ═══════════════════════════════════════════════════════════
+-- AUTO-EXECUTE FLAGS
+-- ═══════════════════════════════════════════════════════════
+getgenv().SASING_AFK_MODE     = true
+getgenv().SASING_HOP_INTERVAL = 40      -- ثواني
+getgenv().SASING_FRUIT_DELAY  = 0.15
+getgenv().SASING_TP_STICK     = 2
+getgenv().SASING_TEAM_CHECK   = false
+
+-- ═══════════════════════════════════════════════════════════
+-- NET REMOTES
+-- ═══════════════════════════════════════════════════════════
+local RegisterHit, RegisterAttack
+task.spawn(function()
+    pcall(function()
+        local Net = ReplicatedStorage:WaitForChild("Modules", 10):WaitForChild("Net", 10)
+        RegisterHit    = Net:WaitForChild("RE/RegisterHit", 10)
+        RegisterAttack = Net:WaitForChild("RE/RegisterAttack", 10)
+    end)
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- STATE
+-- ═══════════════════════════════════════════════════════════
+local FruitAttackConnection = nil
+local TPLoopThread          = nil
+local AutoHopThread         = nil
+local AutoEquipThread       = nil
+
+-- ═══════════════════════════════════════════════════════════
+-- HELPERS
+-- ═══════════════════════════════════════════════════════════
+local function getRoot()
+    local c = lp.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function isFruit(tool)
+    if not tool or not tool:IsA("Tool") then return false end
+    if tool.ToolTip == "Blox Fruit" then return true end
+    if tool.Name:lower():find("fruit") then return true end
+    local fruitNames = {
+        "dough", "dragon", "kitsune", "leopard", "venom", "control",
+        "spirit", "shadow", "buddha", "rumble", "portal", "pain",
+        "blizzard", "gravity", "mammoth", "tiger", "t-rex", "gas",
+        "yeti", "sound", "phoenix", "magma", "ice", "light", "dark",
+        "flame", "sand", "bomb", "spike", "spring", "chop", "smoke"
+    }
+    for _, f in ipairs(fruitNames) do
+        if tool.Name:lower():find(f) then return true end
+    end
+    return false
+end
+
+local function autoEquipFruit()
+    local char = lp.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    local currentTool = char:FindFirstChildOfClass("Tool")
+    if currentTool and isFruit(currentTool) then return end
+
+    local bp = lp:FindFirstChild("Backpack")
+    if bp then
+        for _, t in ipairs(bp:GetChildren()) do
+            if isFruit(t) then
+                pcall(function() hum:EquipTool(t) end)
+                return
+            end
+        end
+    end
+end
+
+local function GetNearestPlayer()
+    local myHRP = getRoot()
+    if not myHRP then return nil end
+
+    local nearest, dist = nil, math.huge
+    for _, v in ipairs(Players:GetPlayers()) do
+        if v ~= lp and v.Character then
+            local hrp = v.Character:FindFirstChild("HumanoidRootPart")
+            local hum = v.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                local skip = false
+                if getgenv().SASING_TEAM_CHECK and v.Team and lp.Team and v.Team == lp.Team then
+                    skip = true
+                end
+                if not skip then
+                    local d = (myHRP.Position - hrp.Position).Magnitude
+                    if d < dist then dist = d; nearest = v end
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+local function FireEquippedFruit(direction, char)
+    pcall(function()
+        if not char then return end
+        local dir = Vector3.new(direction.X, direction.Y, direction.Z)
+
+        local fruits = {
+            {"Pain-Pain",       function(r) for i=1,5 do r:FireServer(dir,1,true) end end},
+            {"Dragon-Dragon",   function(r) for i=1,5 do r:FireServer(dir,1)      end end},
+            {"Tiger-Tiger",     function(r) for i=1,5 do r:FireServer(dir,3)      end end},
+            {"T-Rex-T-Rex",     function(r) for i=1,5 do r:FireServer(dir,1)      end end},
+            {"Kitsune-Kitsune", function(r) for i=1,5 do r:FireServer(direction,1,true) end end},
+        }
+        for _, entry in ipairs(fruits) do
+            local fruitModel = char:FindFirstChild(entry[1])
+            if fruitModel then
+                local remote = fruitModel:FindFirstChild("LeftClickRemote")
+                if remote then entry[2](remote) end
+                return
+            end
+        end
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- SYSTEMS
+-- ═══════════════════════════════════════════════════════════
+local function StartFruitAttack()
+    if FruitAttackConnection then FruitAttackConnection:Disconnect() end
+    FruitAttackConnection = RunService.Heartbeat:Connect(function()
+        if not getgenv().SASING_AFK_MODE then return end
+        if not (RegisterHit and RegisterAttack) then return end
+
+        task.wait(getgenv().SASING_FRUIT_DELAY)
+
+        pcall(function()
+            local target = GetNearestPlayer()
+            if not (target and target.Character) then return end
+
+            local char = lp.Character
+            local myHRP = char and char:FindFirstChild("HumanoidRootPart")
+            local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
+            local tHum = target.Character:FindFirstChildOfClass("Humanoid")
+            if not (myHRP and tHRP and tHum and tHum.Health > 0) then return end
+
+            local direction = (tHRP.Position - myHRP.Position).Unit
+            FireEquippedFruit(direction, char)
+
+            local head = target.Character:FindFirstChild("Head")
+            if head then
+                RegisterAttack:FireServer(0)
+                RegisterHit:FireServer(head, {{target.Character, head}})
+            end
+        end)
+    end)
+end
+
+local function StartAutoEquip()
+    if AutoEquipThread then task.cancel(AutoEquipThread) end
+    AutoEquipThread = task.spawn(function()
+        while getgenv().SASING_AFK_MODE do
+            task.wait(1)
+            autoEquipFruit()
+        end
+    end)
+end
+
+local function GetPlayerTargets()
+    local list = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                list[#list+1] = {hrp = hrp}
+            end
+        end
+    end
+    return list
+end
+
+local function StartTPLoop()
+    if TPLoopThread then task.cancel(TPLoopThread) end
+    TPLoopThread = task.spawn(function()
+        while getgenv().SASING_AFK_MODE do
+            local targets = GetPlayerTargets()
+            if #targets == 0 then
+                task.wait(0.5)
+            else
+                for _, t in ipairs(targets) do
+                    if not getgenv().SASING_AFK_MODE then break end
+                    if not t.hrp or not t.hrp.Parent then continue end
+
+                    local myHRP = getRoot()
+                    if myHRP then
+                        myHRP.CFrame = CFrame.new(t.hrp.Position + Vector3.new(0, 3, 0))
+                        myHRP.Velocity = Vector3.zero
+                    end
+
+                    local endTime = tick() + getgenv().SASING_TP_STICK
+                    while tick() < endTime and getgenv().SASING_AFK_MODE do
+                        local root = getRoot()
+                        if root and t.hrp and t.hrp.Parent then
+                            root.CFrame = CFrame.new(t.hrp.Position + Vector3.new(0, 3, 0))
+                            root.Velocity = Vector3.zero
+                        end
+                        task.wait(0.05)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- AUTO HOP (40s)
+-- ═══════════════════════════════════════════════════════════
+local function hopServer()
+    pcall(function()
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId ..
+                    "/servers/Public?sortOrder=Asc&limit=100"
+        local data = HttpService:JSONDecode(game:HttpGet(url))
+        if data and data.data then
+            for _, v in ipairs(data.data) do
+                if v.playing < v.maxPlayers and v.id ~= game.JobId then
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, v.id, lp)
+                    return
+                end
+            end
+        end
+        TeleportService:Teleport(game.PlaceId, lp)
+    end)
+end
+
+local function StartAutoHop()
+    if AutoHopThread then task.cancel(AutoHopThread) end
+    AutoHopThread = task.spawn(function()
+        while getgenv().SASING_AFK_MODE do
+            task.wait(getgenv().SASING_HOP_INTERVAL)
+            if getgenv().SASING_AFK_MODE then
+                print("[SASING] Hopping...")
+                hopServer()
+                break -- بعد الهوب يوقف (يعاد تشغيله بعد اللود)
+            end
+        end
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- MASTER START
+-- ═══════════════════════════════════════════════════════════
+local function StartEverything()
+    getgenv().SASING_AFK_MODE = true
+    task.wait(2) -- انتظر تحميل الشخصية
+
+    autoEquipFruit()
+    StartFruitAttack()
+    StartAutoEquip()
+    StartTPLoop()
+    StartAutoHop()
+
+    print("[SASING] AFK MODE ON — All systems running")
+    print("[SASING] Next hop in " .. getgenv().SASING_HOP_INTERVAL .. "s")
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- RESPAWN HANDLER (يعيد التشغيل بعد كل hop/death)
+-- ═══════════════════════════════════════════════════════════
+lp.CharacterAdded:Connect(function()
+    task.wait(3)
+    if getgenv().SASING_AFK_MODE then
+        autoEquipFruit()
+        StartFruitAttack()
+        StartAutoEquip()
+        StartTPLoop()
+        StartAutoHop()
+        print("[SASING] Re-enabled after respawn/hop")
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- AUTO START ON EXECUTE
+-- ═══════════════════════════════════════════════════════════
+task.spawn(function()
+    print("[SASING] Script loaded — starting in 2s...")
+    StartEverything()
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- OPTIONAL: MINIMAL UI (if you want to stop it)
+-- ═══════════════════════════════════════════════════════════
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "SASING AFK MODE",
+    LoadingTitle = "AFK Mode",
+    LoadingSubtitle = "Auto-running",
+    Theme = "Dark",
+    ConfigurationSaving = {Enabled = false},
+    KeySystem = false
+})
+
+Rayfield:Notify({
+    Title = "🤖 AFK MODE ON",
+    Content = "All systems running. Hop every 40s.",
+    Duration = 6,
+})
+
+local Tab = Window:CreateTab("Control 🎮", 4483362458)
+Tab:CreateSection("Master")
+
+Tab:CreateToggle({
+    Name = "🤖 AFK MODE (All Systems)",
+    CurrentValue = true,
+    Flag = "AFK_Master",
+    Callback = function(v)
+        getgenv().SASING_AFK_MODE = v
+        if v then
+            autoEquipFruit()
+            StartFruitAttack()
+            StartAutoEquip()
+            StartTPLoop()
+            StartAutoHop()
+        else
+            if FruitAttackConnection then FruitAttackConnection:Disconnect() end
+            if TPLoopThread then task.cancel(TPLoopThread) end
+            if AutoHopThread then task.cancel(AutoHopThread) end
+            if AutoEquipThread then task.cancel(AutoEquipThread) end
+        end
+    end,
+})
+
+Tab:CreateSlider({
+    Name = "🔄 Hop Interval (sec)",
+    Range = {30, 300},
+    Increment = 5,
+    CurrentValue = 40,
+    Flag = "AFK_HopInterval",
+    Callback = function(v)
+        getgenv().SASING_HOP_INTERVAL = v
+        if getgenv().SASING_AFK_MODE then
+            StartAutoHop()
+        end
+    end,
+})
+
+Rayfield:LoadConfiguration()
