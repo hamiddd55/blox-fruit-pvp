@@ -1,0 +1,1313 @@
+--[[
+    SASING HUB | PVP + Farm — PART 1/3
+    - Custom UI (no Rayfield)
+    - Tabs: PvP · Farm · Utility
+    - Draggable window
+    - Minimize button
+    - Part 2 & 3 add features
+--]]
+
+-- ═══════════════════════════════════════════════════════════
+-- SERVICES
+-- ═══════════════════════════════════════════════════════════
+local Players            = game:GetService("Players")
+local RunService         = game:GetService("RunService")
+local ReplicatedStorage  = game:GetService("ReplicatedStorage")
+local CoreGui            = game:GetService("CoreGui")
+local TweenService       = game:GetService("TweenService")
+local UserInputService   = game:GetService("UserInputService")
+local HttpService        = game:GetService("HttpService")
+local TeleportService    = game:GetService("TeleportService")
+local Stats              = game:GetService("Stats")
+local lp                 = Players.LocalPlayer
+
+-- ═══════════════════════════════════════════════════════════
+-- CONFIG (كل الإعدادات)
+-- ═══════════════════════════════════════════════════════════
+getgenv().SASING = {
+    -- Fruit Attack
+    FruitAttack     = false,
+    FruitDelay      = 0.15,
+    TeamCheck       = false,
+    
+    -- TP Players
+    TPPlayers       = false,
+    TPStick         = 0.5,
+    
+    -- TP NPCs
+    TPNPCs          = false,
+    TPNPCDelay      = 0.5,
+    TPNPCRange      = 5000,
+    TPNPCFolder     = "Enemies",
+    
+    -- Auto Team
+    AutoTeam        = true,
+    PreferredTeam   = "Pirates",
+    
+    -- Auto Escape
+    AutoEscape      = false,
+    EscapeY         = 1e20,
+    
+    -- Theme
+    ThemeColor      = Color3.fromRGB(0, 255, 150),
+    AccentColor     = Color3.fromRGB(255, 60, 90),
+    BGColor         = Color3.fromRGB(12, 12, 16),
+    PanelColor      = Color3.fromRGB(18, 18, 24),
+    TextColor       = Color3.fromRGB(230, 230, 240),
+    SubTextColor    = Color3.fromRGB(150, 150, 160),
+}
+
+local Config = getgenv().SASING
+
+-- ═══════════════════════════════════════════════════════════
+-- STATE
+-- ═══════════════════════════════════════════════════════════
+local State = {
+    Character   = nil,
+    Root        = nil,
+    Humanoid    = nil,
+    UI          = {},
+    Connections = {},
+}
+
+-- ═══════════════════════════════════════════════════════════
+-- CHARACTER BIND
+-- ═══════════════════════════════════════════════════════════
+local function onCharacter(c)
+    State.Character = c
+    State.Root      = c:WaitForChild("HumanoidRootPart", 10)
+    State.Humanoid  = c:WaitForChild("Humanoid", 10)
+end
+if lp.Character then onCharacter(lp.Character) end
+lp.CharacterAdded:Connect(onCharacter)
+
+local function getRoot()
+    return State.Root
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- UI FRAMEWORK
+-- ═══════════════════════════════════════════════════════════
+local parent = CoreGui
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SASING_HUB"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+pcall(function() ScreenGui.Parent = parent end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = lp:WaitForChild("PlayerGui")
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- WATERMARK
+-- ═══════════════════════════════════════════════════════════
+local Watermark = Instance.new("Frame", ScreenGui)
+Watermark.Size = UDim2.new(0, 260, 0, 26)
+Watermark.Position = UDim2.new(1, -280, 0, 20)
+Watermark.BackgroundColor3 = Config.BGColor
+Watermark.BackgroundTransparency = 0.1
+Watermark.BorderSizePixel = 0
+Instance.new("UICorner", Watermark).CornerRadius = UDim.new(0, 8)
+
+local WMStroke = Instance.new("UIStroke", Watermark)
+WMStroke.Color = Config.ThemeColor
+WMStroke.Thickness = 1
+WMStroke.Transparency = 0.4
+
+local WMText = Instance.new("TextLabel", Watermark)
+WMText.Size = UDim2.new(1, -12, 1, 0)
+WMText.Position = UDim2.new(0, 8, 0, 0)
+WMText.BackgroundTransparency = 1
+WMText.Text = "SASING HUB v1.0"
+WMText.TextColor3 = Config.ThemeColor
+WMText.Font = Enum.Font.GothamBold
+WMText.TextSize = 11
+WMText.TextXAlignment = Enum.TextXAlignment.Left
+
+task.spawn(function()
+    while Watermark.Parent do
+        local ping = 0
+        pcall(function()
+            ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        end)
+        WMText.Text = string.format("SASING HUB v1.0 · %d ms", ping)
+        task.wait(0.5)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- MAIN WINDOW
+-- ═══════════════════════════════════════════════════════════
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 480, 0, 540)
+Main.Position = UDim2.new(0.5, -240, 0.5, -270)
+Main.BackgroundColor3 = Config.BGColor
+Main.BackgroundTransparency = 0.05
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Main.ClipsDescendants = true
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 14)
+
+local MainStroke = Instance.new("UIStroke", Main)
+MainStroke.Color = Config.ThemeColor
+MainStroke.Thickness = 1.5
+MainStroke.Transparency = 0.4
+
+-- Pulse stroke
+task.spawn(function()
+    while Main.Parent do
+        TweenService:Create(MainStroke, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {Transparency = 0.05, Thickness = 2}):Play()
+        task.wait(1.5)
+        TweenService:Create(MainStroke, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {Transparency = 0.5, Thickness = 1.5}):Play()
+        task.wait(1.5)
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- HEADER
+-- ═══════════════════════════════════════════════════════════
+local Header = Instance.new("Frame", Main)
+Header.Size = UDim2.new(1, 0, 0, 48)
+Header.BackgroundColor3 = Color3.fromRGB(16, 16, 22)
+Header.BorderSizePixel = 0
+
+local HeaderFix = Instance.new("Frame", Header)
+HeaderFix.Size = UDim2.new(1, 0, 0, 12)
+HeaderFix.Position = UDim2.new(0, 0, 1, -12)
+HeaderFix.BackgroundColor3 = Header.BackgroundColor3
+HeaderFix.BorderSizePixel = 0
+
+-- Title
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(1, -80, 0, 20)
+Title.Position = UDim2.new(0, 16, 0, 6)
+Title.BackgroundTransparency = 1
+Title.Text = "SASING HUB"
+Title.TextColor3 = Config.TextColor
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+local Subtitle = Instance.new("TextLabel", Header)
+Subtitle.Size = UDim2.new(1, -80, 0, 12)
+Subtitle.Position = UDim2.new(0, 16, 1, -18)
+Subtitle.BackgroundTransparency = 1
+Subtitle.Text = "PVP + Farm · v1.0"
+Subtitle.TextColor3 = Config.ThemeColor
+Subtitle.TextTransparency = 0.3
+Subtitle.Font = Enum.Font.Gotham
+Subtitle.TextSize = 9
+Subtitle.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Minimize button
+local MinBtn = Instance.new("TextButton", Header)
+MinBtn.Size = UDim2.new(0, 22, 0, 22)
+MinBtn.Position = UDim2.new(1, -56, 0.5, -11)
+MinBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+MinBtn.Text = "—"
+MinBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextSize = 14
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 6)
+
+-- Close button
+local CloseBtn = Instance.new("TextButton", Header)
+CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseBtn.Position = UDim2.new(1, -28, 0.5, -11)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+CloseBtn.Text = "×"
+CloseBtn.TextColor3 = Color3.fromRGB(200, 200, 210)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 14
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+CloseBtn.MouseEnter:Connect(function()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(180, 40, 60)}):Play()
+end)
+CloseBtn.MouseLeave:Connect(function()
+    TweenService:Create(CloseBtn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(28, 28, 36)}):Play()
+end)
+CloseBtn.MouseButton1Click:Connect(function()
+    TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+        {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    task.wait(0.35)
+    ScreenGui:Destroy()
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- TAB BAR
+-- ═══════════════════════════════════════════════════════════
+local TabBar = Instance.new("Frame", Main)
+TabBar.Size = UDim2.new(1, -24, 0, 32)
+TabBar.Position = UDim2.new(0, 12, 0, 56)
+TabBar.BackgroundColor3 = Config.PanelColor
+TabBar.BorderSizePixel = 0
+Instance.new("UICorner", TabBar).CornerRadius = UDim.new(0, 8)
+
+local TabLayout = Instance.new("UIListLayout", TabBar)
+TabLayout.FillDirection = Enum.FillDirection.Horizontal
+TabLayout.Padding = UDim.new(0, 4)
+TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+
+-- Page container
+local PageContainer = Instance.new("Frame", Main)
+PageContainer.Size = UDim2.new(1, -24, 1, -148)
+PageContainer.Position = UDim2.new(0, 12, 0, 96)
+PageContainer.BackgroundTransparency = 1
+
+local Pages = {}
+local TabButtons = {}
+
+local function makePage(name)
+    local p = Instance.new("ScrollingFrame", PageContainer)
+    p.Name = name
+    p.Size = UDim2.new(1, 0, 1, 0)
+    p.BackgroundTransparency = 1
+    p.BorderSizePixel = 0
+    p.ScrollBarThickness = 3
+    p.ScrollBarImageColor3 = Config.ThemeColor
+    p.CanvasSize = UDim2.new(0, 0, 0, 0)
+    p.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    p.Visible = false
+    local l = Instance.new("UIListLayout", p)
+    l.Padding = UDim.new(0, 6)
+    l.SortOrder = Enum.SortOrder.LayoutOrder
+    local u = Instance.new("UIPadding", p)
+    u.PaddingRight = UDim.new(0, 6)
+    u.PaddingBottom = UDim.new(0, 12)
+    return p
+end
+
+local function makeTab(name, order)
+    local btn = Instance.new("TextButton", TabBar)
+    btn.Size = UDim2.new(0, 0, 0, 24)
+    btn.AutomaticSize = Enum.AutomaticSize.X
+    btn.BackgroundColor3 = Color3.fromRGB(28, 28, 36)
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(180, 180, 190)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 10
+    btn.LayoutOrder = order
+
+    local p = Instance.new("UIPadding", btn)
+    p.PaddingLeft = UDim.new(0, 10)
+    p.PaddingRight = UDim.new(0, 10)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    local page = makePage(name)
+    Pages[name] = page
+    TabButtons[name] = btn
+
+    btn.MouseButton1Click:Connect(function()
+        for n, pg in pairs(Pages) do pg.Visible = (n == name) end
+        for n, b in pairs(TabButtons) do
+            if n == name then
+                TweenService:Create(b, TweenInfo.new(0.2),
+                    {BackgroundColor3 = Config.ThemeColor, TextColor3 = Color3.fromRGB(10, 10, 15)}):Play()
+            else
+                TweenService:Create(b, TweenInfo.new(0.2),
+                    {BackgroundColor3 = Color3.fromRGB(28, 28, 36), TextColor3 = Color3.fromRGB(180, 180, 190)}):Play()
+            end
+        end
+    end)
+end
+
+-- Tabs
+makeTab("PVP", 1)
+makeTab("Farm", 2)
+makeTab("Utility", 3)
+
+-- ═══════════════════════════════════════════════════════════
+-- UI HELPERS
+-- ═══════════════════════════════════════════════════════════
+
+-- Section
+local function section(par, text, order)
+    local l = Instance.new("TextLabel", par)
+    l.Size = UDim2.new(1, 0, 0, 16)
+    l.BackgroundTransparency = 1
+    l.Text = text:upper()
+    l.TextColor3 = Config.ThemeColor
+    l.TextTransparency = 0.2
+    l.Font = Enum.Font.GothamBold
+    l.TextSize = 8
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.LayoutOrder = order
+end
+
+-- Toggle
+local function toggle(par, label, key, order)
+    local row = Instance.new("Frame", par)
+    row.Size = UDim2.new(1, 0, 0, 32)
+    row.BackgroundColor3 = Config.PanelColor
+    row.BorderSizePixel = 0
+    row.LayoutOrder = order
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size = UDim2.new(1, -70, 1, 0)
+    lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = label
+    lbl.TextColor3 = Color3.fromRGB(210, 210, 220)
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local sw = Instance.new("Frame", row)
+    sw.Size = UDim2.new(0, 40, 0, 20)
+    sw.Position = UDim2.new(1, -52, 0.5, -10)
+    sw.BackgroundColor3 = Color3.fromRGB(35, 35, 44)
+    sw.BorderSizePixel = 0
+    Instance.new("UICorner", sw).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame", sw)
+    knob.Size = UDim2.new(0, 14, 0, 14)
+    knob.Position = UDim2.new(0, 3, 0.5, -7)
+    knob.BackgroundColor3 = Color3.fromRGB(200, 200, 210)
+    knob.BorderSizePixel = 0
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local click = Instance.new("TextButton", row)
+    click.Size = UDim2.new(1, 0, 1, 0)
+    click.BackgroundTransparency = 1
+    click.Text = ""
+    click.ZIndex = 3
+
+    local function refresh()
+        if Config[key] then
+            TweenService:Create(sw, TweenInfo.new(0.2), {BackgroundColor3 = Config.ThemeColor}):Play()
+            TweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(1, -17, 0.5, -7)}):Play()
+        else
+            TweenService:Create(sw, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(35, 35, 44)}):Play()
+            TweenService:Create(knob, TweenInfo.new(0.2), {Position = UDim2.new(0, 3, 0.5, -7)}):Play()
+        end
+    end
+
+    click.MouseButton1Click:Connect(function()
+        Config[key] = not Config[key]
+        refresh()
+    end)
+
+    refresh()
+end
+
+-- Slider
+local function slider(par, label, key, min, max, order)
+    local row = Instance.new("Frame", par)
+    row.Size = UDim2.new(1, 0, 0, 46)
+    row.BackgroundColor3 = Config.PanelColor
+    row.BorderSizePixel = 0
+    row.LayoutOrder = order
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size = UDim2.new(1, -20, 0, 16)
+    lbl.Position = UDim2.new(0, 12, 0, 4)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = label
+    lbl.TextColor3 = Color3.fromRGB(210, 210, 220)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 10
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local valLbl = Instance.new("TextLabel", row)
+    valLbl.Size = UDim2.new(1, -20, 0, 16)
+    valLbl.Position = UDim2.new(0, 12, 0, 4)
+    valLbl.BackgroundTransparency = 1
+    valLbl.Text = tostring(Config[key])
+    valLbl.TextColor3 = Config.ThemeColor
+    valLbl.Font = Enum.Font.GothamBold
+    valLbl.TextSize = 10
+    valLbl.TextXAlignment = Enum.TextXAlignment.Right
+
+    local bg = Instance.new("Frame", row)
+    bg.Size = UDim2.new(1, -24, 0, 4)
+    bg.Position = UDim2.new(0, 12, 1, -16)
+    bg.BackgroundColor3 = Color3.fromRGB(35, 35, 44)
+    bg.BorderSizePixel = 0
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+
+    local fill = Instance.new("Frame", bg)
+    fill.Size = UDim2.new(0, 0, 1, 0)
+    fill.BackgroundColor3 = Config.ThemeColor
+    fill.BorderSizePixel = 0
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame", bg)
+    knob.Size = UDim2.new(0, 12, 0, 12)
+    knob.Position = UDim2.new(0, -6, 0.5, -6)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.BorderSizePixel = 0
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local function setV(val)
+        val = math.clamp(val, min, max)
+        Config[key] = val
+        local pct = (val - min) / (max - min)
+        fill.Size = UDim2.new(pct, 0, 1, 0)
+        knob.Position = UDim2.new(pct, -6, 0.5, -6)
+        valLbl.Text = tostring(math.floor(val * 100) / 100)
+    end
+    setV(Config[key])
+
+    local drag = false
+    local function fromInput(i)
+        local rel = (i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X
+        setV(min + math.clamp(rel, 0, 1) * (max - min))
+    end
+
+    bg.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then
+            drag = true
+            fromInput(i)
+        end
+    end)
+    knob.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then
+            drag = true
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement
+            or i.UserInputType == Enum.UserInputType.Touch) then
+            fromInput(i)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1
+            or i.UserInputType == Enum.UserInputType.Touch then
+            drag = false
+        end
+    end)
+end
+
+-- Button
+local function button(par, label, order, fn)
+    local b = Instance.new("TextButton", par)
+    b.Size = UDim2.new(1, 0, 0, 30)
+    b.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    b.Text = label
+    b.TextColor3 = Color3.fromRGB(230, 230, 240)
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 10
+    b.LayoutOrder = order
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+
+    b.MouseButton1Click:Connect(fn)
+
+    b.MouseEnter:Connect(function()
+        TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(45, 45, 60)}):Play()
+    end)
+    b.MouseLeave:Connect(function()
+        TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(30, 30, 40)}):Play()
+    end)
+end
+
+-- Input
+local function input(par, label, key, order, placeholder)
+    local row = Instance.new("Frame", par)
+    row.Size = UDim2.new(1, 0, 0, 40)
+    row.BackgroundColor3 = Config.PanelColor
+    row.BorderSizePixel = 0
+    row.LayoutOrder = order
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size = UDim2.new(1, -20, 0, 14)
+    lbl.Position = UDim2.new(0, 12, 0, 4)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = label
+    lbl.TextColor3 = Color3.fromRGB(160, 160, 170)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 9
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local box = Instance.new("TextBox", row)
+    box.Size = UDim2.new(1, -24, 0, 20)
+    box.Position = UDim2.new(0, 12, 0, 18)
+    box.BackgroundColor3 = Color3.fromRGB(25, 25, 32)
+    box.BorderSizePixel = 0
+    box.Text = tostring(Config[key] or "")
+    box.PlaceholderText = placeholder or ""
+    box.TextColor3 = Config.ThemeColor
+    box.Font = Enum.Font.Code
+    box.TextSize = 10
+    box.ClearTextOnFocus = false
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 4)
+
+    box.FocusLost:Connect(function()
+        Config[key] = box.Text
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- UI EXPORT (للاستخدام في Part 2 & 3)
+-- ═══════════════════════════════════════════════════════════
+State.UI = {
+    ScreenGui   = ScreenGui,
+    Main        = Main,
+    Pages       = Pages,
+    TabButtons  = TabButtons,
+    section     = section,
+    toggle      = toggle,
+    slider      = slider,
+    button      = button,
+    input       = input,
+}
+
+-- ✅ السطر المفقود:
+getgenv().SASING_UI = State.UI
+
+-- ═══════════════════════════════════════════════════════════
+-- SHOW FIRST TAB
+-- ═══════════════════════════════════════════════════════════
+for n, p in pairs(Pages) do p.Visible = (n == "PVP") end
+TabButtons.PVP.BackgroundColor3 = Config.ThemeColor
+TabButtons.PVP.TextColor3 = Color3.fromRGB(10, 10, 15)
+
+print("[SASING] ✅ Part 1/3 loaded — UI ready")
+print("[SASING] ➡️ Next: Part 2 (Features)")
+--[[
+    SASING HUB | PART 2/3 — Features
+    - Requires: Part 1 (UI already loaded)
+    - Fruit Attack (Players)
+    - TP Players Loop
+    - TP NPCs Loop
+    - Auto Team Select
+--]]
+
+-- ═══════════════════════════════════════════════════════════
+-- CHECK PART 1
+-- ═══════════════════════════════════════════════════════════
+if not getgenv().SASING then
+    warn("[SASING] ❌ Part 1 not loaded. Run Part 1 first.")
+    return
+end
+
+local Config = getgenv().SASING
+local Players            = game:GetService("Players")
+local RunService         = game:GetService("RunService")
+local ReplicatedStorage  = game:GetService("ReplicatedStorage")
+local lp                 = Players.LocalPlayer
+
+-- ═══════════════════════════════════════════════════════════
+-- NET REMOTES
+-- ═══════════════════════════════════════════════════════════
+local RegisterHit, RegisterAttack
+task.spawn(function()
+    pcall(function()
+        local Net = ReplicatedStorage:WaitForChild("Modules", 10):WaitForChild("Net", 10)
+        RegisterHit    = Net:WaitForChild("RE/RegisterHit", 10)
+        RegisterAttack = Net:WaitForChild("RE/RegisterAttack", 10)
+    end)
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- STATE
+-- ═══════════════════════════════════════════════════════════
+local State = {
+    FruitAttackConnection = nil,
+    TPLoopThread          = nil,
+    TPNPCThread           = nil,
+    AutoEquipThread       = nil,
+    AutoTeamThread        = nil,
+    Character             = nil,
+    Root                  = nil,
+    Humanoid              = nil,
+}
+getgenv().SASING_STATE = State
+
+-- Character bind
+local function onChar(c)
+    State.Character = c
+    State.Root = c:WaitForChild("HumanoidRootPart", 10)
+    State.Humanoid = c:WaitForChild("Humanoid", 10)
+end
+if lp.Character then onChar(lp.Character) end
+lp.CharacterAdded:Connect(onChar)
+
+local function getRoot()
+    local c = lp.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- HELPERS
+-- ═══════════════════════════════════════════════════════════
+local function isFruit(tool)
+    if not tool or not tool:IsA("Tool") then return false end
+    if tool.ToolTip == "Blox Fruit" then return true end
+    if tool.Name:lower():find("fruit") then return true end
+    local fruitNames = {
+        "dough","dragon","kitsune","leopard","venom","control",
+        "spirit","shadow","buddha","rumble","portal","pain",
+        "blizzard","gravity","mammoth","tiger","t-rex","gas",
+        "yeti","sound","phoenix","magma","ice","light","dark",
+        "flame","sand","bomb","spike","spring","chop","smoke"
+    }
+    for _, f in ipairs(fruitNames) do
+        if tool.Name:lower():find(f) then return true end
+    end
+    return false
+end
+
+local function autoEquipFruit()
+    local char = lp.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    local current = char:FindFirstChildOfClass("Tool")
+    if current and isFruit(current) then return end
+    local bp = lp:FindFirstChild("Backpack")
+    if bp then
+        for _, t in ipairs(bp:GetChildren()) do
+            if isFruit(t) then
+                pcall(function() hum:EquipTool(t) end)
+                return
+            end
+        end
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- AUTO TEAM
+-- ═══════════════════════════════════════════════════════════
+local function selectTeam(teamName)
+    pcall(function()
+        if lp.Team and lp.Team.Name ~= "" then
+            print("[SASING] Already in team:", lp.Team.Name)
+            return
+        end
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        local commF = remotes and remotes:FindFirstChild("CommF_")
+        if commF then
+            pcall(function() commF:InvokeServer("SetTeam", teamName) end)
+            print("[SASING] Team set:", teamName)
+        end
+    end)
+end
+
+local function StartAutoTeam()
+    if State.AutoTeamThread then task.cancel(State.AutoTeamThread) end
+    State.AutoTeamThread = task.spawn(function()
+        task.wait(2)
+        if not Config.AutoTeam then return end
+        selectTeam(Config.PreferredTeam)
+        for i = 1, 12 do
+            task.wait(5)
+            if not Config.AutoTeam then return end
+            if lp.Team and lp.Team.Name ~= "" then
+                print("[SASING] Team confirmed:", lp.Team.Name)
+                return
+            end
+            selectTeam(Config.PreferredTeam)
+        end
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- FRUIT ATTACK (Players)
+-- ═══════════════════════════════════════════════════════════
+local function GetNearestPlayer()
+    local myHRP = getRoot()
+    if not myHRP then return nil end
+    local nearest, dist = nil, math.huge
+    for _, v in ipairs(Players:GetPlayers()) do
+        if v ~= lp and v.Character then
+            local hrp = v.Character:FindFirstChild("HumanoidRootPart")
+            local hum = v.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                local skip = false
+                if Config.TeamCheck and v.Team and lp.Team and v.Team == lp.Team then
+                    skip = true
+                end
+                if not skip then
+                    local d = (myHRP.Position - hrp.Position).Magnitude
+                    if d < dist then dist = d; nearest = v end
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+local function FireEquippedFruit(direction, char)
+    pcall(function()
+        if not char then return end
+        local dir = Vector3.new(direction.X, direction.Y, direction.Z)
+        local fruits = {
+            {"Pain-Pain",       function(r) for i=1,5 do r:FireServer(dir,1,true) end end},
+            {"Dragon-Dragon",   function(r) for i=1,5 do r:FireServer(dir,1)      end end},
+            {"Tiger-Tiger",     function(r) for i=1,5 do r:FireServer(dir,3)      end end},
+            {"T-Rex-T-Rex",     function(r) for i=1,5 do r:FireServer(dir,1)      end end},
+            {"Kitsune-Kitsune", function(r) for i=1,5 do r:FireServer(direction,1,true) end end},
+        }
+        for _, entry in ipairs(fruits) do
+            local fruitModel = char:FindFirstChild(entry[1])
+            if fruitModel then
+                local remote = fruitModel:FindFirstChild("LeftClickRemote")
+                if remote then entry[2](remote) end
+                return
+            end
+        end
+    end)
+end
+
+local function StartFruitAttack()
+    if State.FruitAttackConnection then State.FruitAttackConnection:Disconnect() end
+    State.FruitAttackConnection = RunService.Heartbeat:Connect(function()
+        if not Config.FruitAttack then return end
+        if not (RegisterHit and RegisterAttack) then return end
+        task.wait(Config.FruitDelay)
+        autoEquipFruit()
+        pcall(function()
+            local target = GetNearestPlayer()
+            if not (target and target.Character) then return end
+            local char = lp.Character
+            local myHRP = char and char:FindFirstChild("HumanoidRootPart")
+            local tHRP = target.Character:FindFirstChild("HumanoidRootPart")
+            local tHum = target.Character:FindFirstChildOfClass("Humanoid")
+            if not (myHRP and tHRP and tHum and tHum.Health > 0) then return end
+            local direction = (tHRP.Position - myHRP.Position).Unit
+            FireEquippedFruit(direction, char)
+            local head = target.Character:FindFirstChild("Head")
+            if head then
+                RegisterAttack:FireServer(0)
+                RegisterHit:FireServer(head, {{target.Character, head}})
+            end
+        end)
+    end)
+end
+
+local function StopFruitAttack()
+    if State.FruitAttackConnection then
+        State.FruitAttackConnection:Disconnect()
+        State.FruitAttackConnection = nil
+    end
+end
+
+local function StartAutoEquip()
+    if State.AutoEquipThread then task.cancel(State.AutoEquipThread) end
+    State.AutoEquipThread = task.spawn(function()
+        while Config.FruitAttack or Config.TPNPCs do
+            task.wait(1)
+            autoEquipFruit()
+        end
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- TP PLAYERS LOOP
+-- ═══════════════════════════════════════════════════════════
+local function GetPlayerTargets()
+    local list = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp and p.Character then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health > 0 then
+                list[#list+1] = {hrp = hrp}
+            end
+        end
+    end
+    return list
+end
+
+local function StartTPPlayers()
+    if State.TPLoopThread then task.cancel(State.TPLoopThread) end
+    State.TPLoopThread = task.spawn(function()
+        while Config.TPPlayers do
+            local targets = GetPlayerTargets()
+            if #targets == 0 then
+                task.wait(0.5)
+            else
+                for _, t in ipairs(targets) do
+                    if not Config.TPPlayers then break end
+                    if not t.hrp or not t.hrp.Parent then continue end
+                    local myHRP = getRoot()
+                    if myHRP then
+                        myHRP.CFrame = CFrame.new(t.hrp.Position + Vector3.new(0, 3, 0))
+                        myHRP.Velocity = Vector3.zero
+                    end
+                    local endTime = tick() + Config.TPStick
+                    while tick() < endTime and Config.TPPlayers do
+                        local root = getRoot()
+                        if root and t.hrp and t.hrp.Parent then
+                            root.CFrame = CFrame.new(t.hrp.Position + Vector3.new(0, 3, 0))
+                            root.Velocity = Vector3.zero
+                        end
+                        task.wait(0.05)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function StopTPPlayers()
+    if State.TPLoopThread then
+        task.cancel(State.TPLoopThread)
+        State.TPLoopThread = nil
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- TP NPCs LOOP
+-- ═══════════════════════════════════════════════════════════
+local function GetAllNPCs()
+    local list = {}
+    local folder = workspace:FindFirstChild(Config.TPNPCFolder)
+    if not folder then return list end
+    local myRoot = getRoot()
+    if not myRoot then return list end
+
+    for _, npc in ipairs(folder:GetChildren()) do
+        if npc:IsA("Model") then
+            local hum = npc:FindFirstChildOfClass("Humanoid")
+            local hrp = npc:FindFirstChild("HumanoidRootPart")
+            if hum and hrp and hum.Health > 0 then
+                local dist = (hrp.Position - myRoot.Position).Magnitude
+                if dist <= Config.TPNPCRange then
+                    list[#list+1] = {model = npc, hrp = hrp, hum = hum, dist = dist}
+                end
+            end
+        end
+    end
+    table.sort(list, function(a, b) return a.dist < b.dist end)
+    return list
+end
+
+local function StartTPNPCs()
+    if State.TPNPCThread then task.cancel(State.TPNPCThread) end
+    State.TPNPCThread = task.spawn(function()
+        while Config.TPNPCs do
+            local npcs = GetAllNPCs()
+            local myRoot = getRoot()
+            if not myRoot then
+                task.wait(0.5)
+            elseif #npcs == 0 then
+                task.wait(0.5)
+            else
+                for _, t in ipairs(npcs) do
+                    if not Config.TPNPCs then break end
+                    if not t.hrp or not t.hrp.Parent then continue end
+                    if not t.hum or t.hum.Health <= 0 then continue end
+                    local root = getRoot()
+                    if root then
+                        root.CFrame = CFrame.new(t.hrp.Position + Vector3.new(0, 3, 0))
+                        root.Velocity = Vector3.zero
+                    end
+                    local endTime = tick() + Config.TPNPCDelay
+                    while tick() < endTime and Config.TPNPCs do
+                        local root2 = getRoot()
+                        if root2 and t.hrp and t.hrp.Parent then
+                            root2.CFrame = CFrame.new(t.hrp.Position + Vector3.new(0, 3, 0))
+                            root2.Velocity = Vector3.zero
+                        end
+                        task.wait(0.05)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function StopTPNPCs()
+    if State.TPNPCThread then
+        task.cancel(State.TPNPCThread)
+        State.TPNPCThread = nil
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- BUILD UI (PART 2)
+-- ═══════════════════════════════════════════════════════════
+local UI = getgenv().SASING_UI
+if not UI then
+    warn("[SASING] ⚠️ UI not found — Part 1 not loaded properly")
+    return
+end
+
+local Pages = UI.Pages
+local section = UI.section
+local toggle = UI.toggle
+local slider = UI.slider
+local button = UI.button
+local input = UI.input
+
+-- ─── PVP TAB ───────────────────────────────────────────────
+section(Pages.PVP, "Fruit Attack (Players)", 1)
+toggle(Pages.PVP, "🍎 Fruit Fast Attack", "FruitAttack", 2)
+slider(Pages.PVP, "⏱️ Fruit Delay", "FruitDelay", 0.05, 0.5, 3)
+toggle(Pages.PVP, "🛡️ Team Check", "TeamCheck", 4)
+
+section(Pages.PVP, "TP Players Loop", 5)
+toggle(Pages.PVP, "🌀 TP to Players", "TPPlayers", 6)
+slider(Pages.PVP, "⏱️ Stick Duration (sec)", "TPStick", 0.1, 10, 7)
+
+section(Pages.PVP, "Auto Team", 8)
+toggle(Pages.PVP, "🏴 Auto Team Select", "AutoTeam", 9)
+
+-- ─── FARM TAB ──────────────────────────────────────────────
+section(Pages.Farm, "TP NPCs Loop", 1)
+toggle(Pages.Farm, "🤖 TP to All NPCs", "TPNPCs", 2)
+slider(Pages.Farm, "⏱️ Stay on NPC (sec)", "TPNPCDelay", 0.1, 5, 3)
+slider(Pages.Farm, "🎯 Max Range", "TPNPCRange", 100, 10000, 4)
+input(Pages.Farm, "📁 NPC Folder", "TPNPCFolder", 5, "Enemies")
+
+-- ═══════════════════════════════════════════════════════════
+-- HOOK TOGGLES (نربطهم بالـ Start/Stop)
+-- ═══════════════════════════════════════════════════════════
+-- نراقب التغييرات كل 0.2s
+task.spawn(function()
+    local lastState = {
+        FruitAttack = false,
+        TPPlayers   = false,
+        TPNPCs      = false,
+        AutoTeam    = false,
+    }
+
+    while true do
+        task.wait(0.2)
+
+        -- Fruit Attack
+        if Config.FruitAttack ~= lastState.FruitAttack then
+            lastState.FruitAttack = Config.FruitAttack
+            if Config.FruitAttack then StartFruitAttack(); StartAutoEquip() else StopFruitAttack() end
+        end
+
+        -- TP Players
+        if Config.TPPlayers ~= lastState.TPPlayers then
+            lastState.TPPlayers = Config.TPPlayers
+            if Config.TPPlayers then StartTPPlayers() else StopTPPlayers() end
+        end
+
+        -- TP NPCs
+        if Config.TPNPCs ~= lastState.TPNPCs then
+            lastState.TPNPCs = Config.TPNPCs
+            if Config.TPNPCs then StartTPNPCs(); StartAutoEquip() else StopTPNPCs() end
+        end
+
+        -- Auto Team
+        if Config.AutoTeam ~= lastState.AutoTeam then
+            lastState.AutoTeam = Config.AutoTeam
+            if Config.AutoTeam then StartAutoTeam() end
+        end
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- RESPAWN HANDLER
+-- ═══════════════════════════════════════════════════════════
+lp.CharacterAdded:Connect(function()
+    task.wait(2)
+    if Config.FruitAttack then StartFruitAttack() end
+    if Config.TPPlayers then StartTPPlayers() end
+    if Config.TPNPCs then StartTPNPCs() end
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- EXPORT
+-- ═══════════════════════════════════════════════════════════
+getgenv().SASING_P2 = {
+    StartFruitAttack = StartFruitAttack,
+    StopFruitAttack  = StopFruitAttack,
+    StartTPPlayers   = StartTPPlayers,
+    StopTPPlayers    = StopTPPlayers,
+    StartTPNPCs      = StartTPNPCs,
+    StopTPNPCs       = StopTPNPCs,
+    StartAutoTeam    = StartAutoTeam,
+    AutoEquip        = autoEquipFruit,
+    SelectTeam       = selectTeam,
+}
+
+print("[SASING] ✅ Part 2/3 loaded — Features ready")
+print("[SASING] ➡️ Next: Part 3 (Hop + Escape)")
+--[[
+    SASING HUB | PART 3/3 — Server Hop + Escape + Auto Re-Execute
+    - Requires: Part 1 (UI) & Part 2 (Features)
+    - Best Server Hop button
+    - Escape button (Fly up + Hop)
+    - Auto Escape (All PvP OFF → Fly up → Hop)
+    - Auto Re-Execute (queue_on_teleport)
+--]]
+
+-- ═══════════════════════════════════════════════════════════
+-- CHECK PART 1 & 2
+-- ═══════════════════════════════════════════════════════════
+if not getgenv().SASING then
+    warn("[SASING] ❌ Part 1 not loaded")
+    return
+end
+if not getgenv().SASING_UI then
+    warn("[SASING] ❌ Part 1 UI not exported properly")
+    return
+end
+if not getgenv().SASING_P2 then
+    warn("[SASING] ❌ Part 2 not loaded")
+    return
+end
+
+local Config = getgenv().SASING
+local UI = getgenv().SASING_UI
+local P2 = getgenv().SASING_P2
+local State = getgenv().SASING_STATE or {}
+
+local Players            = game:GetService("Players")
+local RunService         = game:GetService("RunService")
+local ReplicatedStorage  = game:GetService("ReplicatedStorage")
+local HttpService        = game:GetService("HttpService")
+local TeleportService    = game:GetService("TeleportService")
+local lp                 = Players.LocalPlayer
+
+-- ═══════════════════════════════════════════════════════════
+-- CONFIG
+-- ═══════════════════════════════════════════════════════════
+Config.HopButtonCount = Config.HopButtonCount or 0
+Config.EscapeWait     = Config.EscapeWait or 2
+Config.ReExecute      = Config.ReExecute ~= nil and Config.ReExecute or true
+
+local SCRIPT_URL = "https://raw.githubusercontent.com/hamiddd55/blox-fruit-pvp/refs/heads/main/auto_bounty"
+
+-- ═══════════════════════════════════════════════════════════
+-- HELPERS
+-- ═══════════════════════════════════════════════════════════
+local function getRoot()
+    local c = lp.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- SERVER HOP (Best Ping)
+-- ═══════════════════════════════════════════════════════════
+local function HopToBestServer()
+    pcall(function()
+        print("[SASING] 🚀 Hop to best server...")
+
+        local url = "https://games.roblox.com/v1/games/" .. game.PlaceId ..
+                    "/servers/Public?sortOrder=Asc&limit=100"
+        local ok, data = pcall(function() return HttpService:JSONDecode(game:HttpGet(url)) end)
+
+        if not ok or not data or not data.data then
+            print("[SASING] ❌ API failed, hopping random")
+            TeleportService:Teleport(game.PlaceId, lp)
+            return
+        end
+
+        local candidates = {}
+        for _, server in ipairs(data.data) do
+            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                local pingScore = (server.ping and server.ping > 0) and server.ping or 9999
+                local playerScore = server.playing * 2
+                table.insert(candidates, {
+                    id = server.id,
+                    score = pingScore + playerScore,
+                    ping = server.ping or 0,
+                    playing = server.playing,
+                })
+            end
+        end
+
+        if #candidates == 0 then
+            print("[SASING] ❌ No servers found")
+            TeleportService:Teleport(game.PlaceId, lp)
+            return
+        end
+
+        table.sort(candidates, function(a, b) return a.score < b.score end)
+        local best = candidates[1]
+        print("[SASING] ✅ Best:", best.ping, "ms |", best.playing, "players")
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, best.id, lp)
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- FLY UP (للهروب)
+-- ═══════════════════════════════════════════════════════════
+local function FlyUp()
+    local hrp = getRoot()
+    if not hrp then return end
+    hrp.CFrame = CFrame.new(hrp.Position.X, Config.EscapeY, hrp.Position.Z)
+    hrp.Velocity = Vector3.zero
+    print("[SASING] ⬆️ Flew to Y =", Config.EscapeY)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- ESCAPE (Fly up + Hop)
+-- ═══════════════════════════════════════════════════════════
+local function Escape()
+    task.spawn(function()
+        print("[SASING] 🚨 ESCAPE triggered")
+        FlyUp()
+        task.wait(Config.EscapeWait)
+        HopToBestServer()
+    end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- AUTO ESCAPE LOOP
+-- ═══════════════════════════════════════════════════════════
+local EscapeRunning = false
+
+local function StartAutoEscape()
+    if EscapeRunning then return end
+    EscapeRunning = true
+
+    task.spawn(function()
+        while Config.AutoEscape do
+            task.wait(5)
+            if not Config.AutoEscape then break end
+
+            -- جمع اللاعبين
+            local players = {}
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= lp then table.insert(players, p) end
+            end
+
+            if #players == 0 then continue end
+
+            -- تحقق: كل اللاعبين طايرين عالي؟
+            local allHighUp = true
+            for _, p in ipairs(players) do
+                local hrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                if not hrp or hrp.Position.Y < 1000 then
+                    allHighUp = false
+                    break
+                end
+            end
+
+            -- أو: كل اللاعبين Health = 0 (ماتوا)
+            local allDead = true
+            for _, p in ipairs(players) do
+                local hum = p.Character and p.Character:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health > 0 then
+                    allDead = false
+                    break
+                end
+            end
+
+            if allHighUp or allDead then
+                print("[SASING] 🚨 All players escaped/died → Escaping")
+                Escape()
+                task.wait(5)
+            end
+        end
+        EscapeRunning = false
+    end)
+end
+
+local function StopAutoEscape()
+    Config.AutoEscape = false
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- AUTO RE-EXECUTE (queue_on_teleport)
+-- ═══════════════════════════════════════════════════════════
+task.spawn(function()
+    task.wait(5)
+    if not Config.ReExecute then return end
+
+    if not queue_on_teleport then
+        print("[SASING] ⚠️ queue_on_teleport not supported")
+        return
+    end
+
+    local reloadCode = string.format([[
+        task.wait(8)
+        local ok, err = pcall(function()
+            loadstring(game:HttpGet("%s"))()
+        end)
+        if not ok then
+            warn("[SASING] Reload failed:", err)
+        end
+    ]], SCRIPT_URL)
+
+    pcall(function() queue_on_teleport(reloadCode) end)
+    print("[SASING] ✅ Auto Re-Execute queued")
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- BUILD UI (PART 3)
+-- ═══════════════════════════════════════════════════════════
+local Pages = UI.Pages
+local section = UI.section
+local toggle = UI.toggle
+local slider = UI.slider
+local button = UI.button
+
+-- ─── UTILITY TAB ───────────────────────────────────────────
+section(Pages.Utility, "Server", 1)
+
+button(Pages.Utility, "🚀 Hop to Best Server", 2, function()
+    HopToBestServer()
+end)
+
+button(Pages.Utility, "🚨 Escape Now (Fly + Hop)", 3, function()
+    Escape()
+end)
+
+section(Pages.Utility, "Auto Escape", 4)
+
+toggle(Pages.Utility, "🚨 Auto Escape (All High/Dead)", "AutoEscape", 5)
+
+slider(Pages.Utility, "⬆️ Escape Y Height", "EscapeY", 1000, 1e20, 6)
+
+slider(Pages.Utility, "⏱️ Wait After Fly (sec)", "EscapeWait", 1, 10, 7)
+
+section(Pages.Utility, "Auto Re-Execute", 8)
+
+toggle(Pages.Utility, "🔄 Auto Re-Execute on Hop", "ReExecute", 9)
+
+section(Pages.Utility, "Info", 10)
+
+local infoLbl = Instance.new("TextLabel", Pages.Utility)
+infoLbl.Size = UDim2.new(1, 0, 0, 60)
+infoLbl.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+infoLbl.BorderSizePixel = 0
+infoLbl.Text = "ℹ️ Part 3 loaded\nEscape Y: 1e20\nHop: best ping"
+infoLbl.TextColor3 = Color3.fromRGB(150, 150, 160)
+infoLbl.Font = Enum.Font.Gotham
+infoLbl.TextSize = 10
+infoLbl.TextWrapped = true
+infoLbl.LayoutOrder = 11
+Instance.new("UICorner", infoLbl).CornerRadius = UDim.new(0, 8)
+
+-- ═══════════════════════════════════════════════════════════
+-- HOOK TOGGLES
+-- ═══════════════════════════════════════════════════════════
+task.spawn(function()
+    local lastState = {
+        AutoEscape = false,
+    }
+
+    while true do
+        task.wait(0.2)
+
+        if Config.AutoEscape ~= lastState.AutoEscape then
+            lastState.AutoEscape = Config.AutoEscape
+            if Config.AutoEscape then StartAutoEscape() else StopAutoEscape() end
+        end
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════
+-- EXPORT
+-- ═══════════════════════════════════════════════════════════
+getgenv().SASING_P3 = {
+    HopToBestServer = HopToBestServer,
+    FlyUp           = FlyUp,
+    Escape          = Escape,
+    StartAutoEscape = StartAutoEscape,
+    StopAutoEscape  = StopAutoEscape,
+}
+
+print("[SASING] ✅ Part 3/3 loaded — All systems ready!")
+print("[SASING] 🎉 SASING HUB fully loaded")
