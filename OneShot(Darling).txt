@@ -1,0 +1,170 @@
+-- Fruits M1 One Shot（使用你指定的攻击逻辑）
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+
+-- ==================== 全局控制 ====================
+_G.FruitsM1Enable = false
+_G.FruitsM1DelayValue = 0.15          -- 攻击间隔，可自己改
+
+-- ==================== 获取果实 Remote ====================
+local function GetFruitRemote()
+	local char = LocalPlayer.Character
+	if not char then return nil end
+
+	local fruit = nil
+
+	-- 先找手上的恶魔果实
+	for _, item in ipairs(char:GetChildren()) do
+		if item:IsA("Tool") and item:GetAttribute("WeaponType") == "Demon Fruit" then
+			fruit = item
+			break
+		end
+	end
+
+	-- 没有就从背包装备
+	if not fruit then
+		local backpack = LocalPlayer:FindFirstChild("Backpack")
+		if backpack then
+			for _, item in ipairs(backpack:GetChildren()) do
+				if item:IsA("Tool") and item:GetAttribute("WeaponType") == "Demon Fruit" then
+					fruit = item
+					break
+				end
+			end
+			if fruit then
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				if hum then
+					hum:EquipTool(fruit)
+					task.wait(0.1)
+					-- 重新获取装备后的工具
+					for _, item in ipairs(char:GetChildren()) do
+						if item:IsA("Tool") and item:GetAttribute("WeaponType") == "Demon Fruit" then
+							fruit = item
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+
+	if not fruit then return nil end
+
+	-- 寻找点击 Remote
+	local remote = fruit:FindFirstChild("LeftClickRemote")
+		or fruit:FindFirstChild("ClickRemote")
+		or fruit:FindFirstChild("M1Remote")
+
+	if not remote then
+		for _, v in ipairs(fruit:GetChildren()) do
+			if v:IsA("RemoteEvent") and v.Name:lower():find("click") then
+				remote = v
+				break
+			end
+		end
+	end
+
+	return remote
+end
+
+-- ==================== 你提供的攻击逻辑 ====================
+task.spawn(function()
+	while true do
+		if _G.FruitsM1Enable then
+			local char   = LocalPlayer.Character
+			local curHRP = char and char:FindFirstChild("HumanoidRootPart")
+			local remote = GetFruitRemote()
+
+			if curHRP and remote then
+				local enemiesFolder = Workspace:FindFirstChild("Enemies")
+				if enemiesFolder then
+					for _, npc in ipairs(enemiesFolder:GetChildren()) do
+						if npc.Name == "Player" then continue end
+
+						local targetHRP = npc:FindFirstChild("HumanoidRootPart")
+						local hum       = npc:FindFirstChild("Humanoid")
+
+						if targetHRP and hum and hum.Health > 0 then
+							if (targetHRP.Position - curHRP.Position).Magnitude < 500 then
+								pcall(function()
+									remote:FireServer(Vector3.new(9e30, 9e30, 9e30), 5, false)
+								end)
+							end
+						end
+					end
+				end
+			end
+		end
+		task.wait(_G.FruitsM1DelayValue)
+	end
+end)
+
+-- ==================== UI ====================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FruitsM1UI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 200, 0, 70)
+Frame.Position = UDim2.new(0, 20, 0.5, -35)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 0, 28)
+Title.Position = UDim2.new(0, 10, 0, 6)
+Title.BackgroundTransparency = 1
+Title.Text = "Fruits M1 OneShot"
+Title.TextColor3 = Color3.fromRGB(220, 220, 230)
+Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Frame
+
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 70, 0, 26)
+ToggleBtn.Position = UDim2.new(1, -80, 0, 36)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+ToggleBtn.Text = "OFF"
+ToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+ToggleBtn.TextSize = 13
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.AutoButtonColor = false
+ToggleBtn.Parent = Frame
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 6)
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(0, 100, 0, 26)
+StatusLabel.Position = UDim2.new(0, 10, 0, 36)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "已关闭"
+StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
+StatusLabel.TextSize = 13
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+StatusLabel.Parent = Frame
+
+ToggleBtn.MouseButton1Click:Connect(function()
+	_G.FruitsM1Enable = not _G.FruitsM1Enable
+
+	if _G.FruitsM1Enable then
+		ToggleBtn.Text = "ON"
+		ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 90)
+		ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		StatusLabel.Text = "攻击中"
+		StatusLabel.TextColor3 = Color3.fromRGB(80, 220, 120)
+	else
+		ToggleBtn.Text = "OFF"
+		ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+		ToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+		StatusLabel.Text = "已关闭"
+		StatusLabel.TextColor3 = Color3.fromRGB(160, 160, 170)
+	end
+end)
+
+print("[Fruits M1] 已加载 | 攻击逻辑已替换")
