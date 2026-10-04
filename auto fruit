@@ -30,7 +30,7 @@ local tbl = {
 	Start = true,
 	Servers = {},
 	["Hop Delay"] = 1.5,
-	["Bypass Teleport"] = true,
+	["Bypass Teleport"] = false,
 }
 
 local tbl2 = {}
