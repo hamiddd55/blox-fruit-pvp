@@ -1,1853 +1,2297 @@
-repeat
-	wait()
-until game:IsLoaded()
+-- ez crack skid night hub 😂
+-- Deobfuscated by DevAurora Code
 
-local v = (getgenv or getrenv or getfenv)()
-local kaitunFruit = v.KaitunFruit and typeof(v.KaitunFruit) == "table" and v.KaitunFruit or {}
-kaitunFruit.Team = kaitunFruit.Team or "Marines"
-kaitunFruit.BlacklistFruits = kaitunFruit.BlacklistFruits or {}
-kaitunFruit.Webhook = kaitunFruit.Webhook or {}
-kaitunFruit.Webhook.Enabled = kaitunFruit.Webhook.Enabled or false
-kaitunFruit.Webhook.Url = kaitunFruit.Webhook.Url or ""
-kaitunFruit.UsingHopApi = kaitunFruit.UsingHopApi or true
-v.KaitunFruit = kaitunFruit
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local v = workspace
+local localPlayer = Players.LocalPlayer
+local genv = type(getgenv) == "function" and getgenv() or _G
 
-local obj = setmetatable({}, { __index = function(arg, arg2)
-	return game:GetService(arg2)
-end })
+if genv.NightPvp and genv.NightPvp.Unload then
+	pcall(genv.NightPvp.Unload)
+	task.wait(0.25)
+end
 
-local workspace = obj.Workspace
-local replicatedStorage = obj.ReplicatedStorage
-local lighting = obj.Lighting
-local httpService = obj.HttpService
-local tweenService = obj.TweenService
-local players = obj.Players
-players = players and players.LocalPlayer
+local tbl = { Name = "Night Hub", Game = "Blox Fruits PvP", Build = "1.0" }
+local flag = true
+local tbl2 = {}
+local tbl3 = {}
+local currentCamera = v.CurrentCamera
+local mouse = localPlayer:GetMouse()
+local gethui_ = rawget(genv, "gethui")
+local v2 = nil
+local v3 = nil
+local n = nil
+local unit = nil
+local v4 = nil
+local position = nil
+local position2 = nil
+local unit2 = nil
+local flag2 = false
+local flag3 = false
+local flag4 = false
 
-local tbl = {
-	["Store Fruit"] = true,
-	Start = true,
-	Servers = {},
-	["Hop Delay"] = 1.5,
-	["Bypass Teleport"] = false,
+local tbl4 = {
+	pickMode = "Smart",
+	smartHp = 50,
+	part = "Head",
+	useFov = true,
+	fov = 160,
+	maxDist = 1500,
+	pred = 0.1,
+	speed = false,
+	speedValue = 80,
+	jumpOn = false,
+	jumpValue = 80,
+	noclip = false,
+	noStun = false,
+	moverFilter = "Smart",
+	fly = false,
+	flyKey = "None",
+	flyMode = "Smart",
+	engageDist = 8,
+	engageEdge = 10,
+	retreatHp = 40,
+	gankRange = 60,
+	autoSkill = false,
+	skillKeys = { Z = true, X = true, C = true, V = true },
+	skillRange = 60,
+	skillHold = 0.1,
+	skillGap = 0.35,
+	flySpeed = 200,
+	flySafe = 180,
+	flyDist = 10,
+	flyUp = 8,
+	kiteDist = 25,
+	kiteSway = 6,
+	antiAim = false,
+	antiAimPower = 200,
+	dodge = false,
+	dodgeRange = 25,
+	dodgeDist = 14,
+	dodgeCd = 1.5,
+	orbitRadius = 12,
+	orbitSpeed = 2.5,
+	flyNoclip = true,
+	hitbox = false,
+	hitboxSize = 12,
+	hitboxShow = true,
+	autoGun = false,
+	gunPick = "Dragonstorm",
+	gunRange = 150,
+	gunRate = 0.35,
+	gunSkills = false,
+	gunBack = true,
+	escape = false,
+	escapeHp = 25,
+	escapeUp = 250,
+	killNote = true,
+	teamCheck = true,
+	wallCheck = false,
+	skipFriends = false,
+	lockKey = "T",
+	aimbot = false,
+	aimTrigger = "Hold right mouse",
+	aimKey = "Q",
+	smooth = 0.25,
+	silent = false,
+	chance = 100,
+	aura = false,
+	auraAll = true,
+	auraRange = 55,
+	auraRate = 0.12,
+	auraWeapon = "Keep current",
+	buso = false,
+	ken = false,
+	race = false,
+	stick = false,
+	stickUp = 6,
+	stickBack = 3,
+	stickRange = 150,
+	spectate = false,
+	infJump = false,
+	antiAfk = true,
+	esp = false,
+	box = true,
+	name = true,
+	info = true,
+	bar = true,
+	hpText = true,
+	chams = false,
+	tracer = false,
+	tracerFrom = "Bottom",
+	espDist = 3000,
+	espColor = "White",
+	teamColor = false,
+	showFov = true,
+	tgtLine = true,
+	lineFrom = "Character",
+	tgtMark = true,
+	tgtColor = "Red",
 }
 
-local tbl2 = {}
-local tbl3 = { Module = {} }
-
-tbl3.Module.Encrypt = function()
-	local tbl4 = {}
-	local bxor = bit32.bxor
-	local band = bit32.band
-	local lshift = bit32.lshift
-	local rshift = bit32.rshift
-	local lrotate = bit32.lrotate
-	local str = "NIGHTHUB|"
-	local n = 8
-	local n2 = 4
-	local n3 = 4294967296
-	local tbl5 = { 1634760805, 857760878, 2036477234, 1797285236 }
-
-	local function fn(arg)
-		local tbl6 = {}
-
-		for i = 1, #arg, 2 do
-			tbl6[#tbl6 + 1] = tonumber(arg:sub(i, i + 1), 16)
-		end
-
-		return tbl6
-	end
-
-	local function fn2(arg)
-		local tbl6 = {}
-
-		for i = 1, #arg do
-			tbl6[i] = arg:byte(i)
-		end
-
-		return tbl6
-	end
-
-	local function fn3(arg)
-		local tbl6 = {}
-
-		for i = 1, #arg do
-			tbl6[i] = string.char(arg[i])
-		end
-
-		return table.concat(tbl6)
-	end
-
-	local function fn4(arg, arg2)
-		return arg[arg2] + arg[arg2 + 1] * 256 + arg[arg2 + 2] * 65536 + arg[arg2 + 3] * 16777216
-	end
-
-	local function fn5(arg, arg2, arg3, arg4, arg5)
-		arg[arg2] = (arg[arg2] + arg[arg3]) % n3
-		arg[arg5] = lrotate(bxor(arg[arg5], arg[arg2]), 16)
-		arg[arg4] = (arg[arg4] + arg[arg5]) % n3
-		arg[arg3] = lrotate(bxor(arg[arg3], arg[arg4]), 12)
-		arg[arg2] = (arg[arg2] + arg[arg3]) % n3
-		arg[arg5] = lrotate(bxor(arg[arg5], arg[arg2]), 8)
-		arg[arg4] = (arg[arg4] + arg[arg5]) % n3
-		arg[arg3] = lrotate(bxor(arg[arg3], arg[arg4]), 7)
-	end
-
-	local function fn6(arg)
-		for i = 1, 10 do
-			fn5(arg, 1, 5, 9, 13)
-			fn5(arg, 2, 6, 10, 14)
-			fn5(arg, 3, 7, 11, 15)
-			fn5(arg, 4, 8, 12, 16)
-			fn5(arg, 1, 6, 11, 16)
-			fn5(arg, 2, 7, 12, 13)
-			fn5(arg, 3, 8, 9, 14)
-			fn5(arg, 4, 5, 10, 15)
-		end
-	end
-
-	local function fn7(arg, arg2, arg3)
-		local tbl6 = { tbl5[1], tbl5[2], tbl5[3], tbl5[4] }
-
-		for i = 0, 7 do
-			tbl6[5 + i] = fn4(arg, 1 + 4 * i)
-		end
-
-		tbl6[13] = arg2 % n3
-
-		for i = 0, 2 do
-			tbl6[14 + i] = fn4(arg3, 1 + 4 * i)
-		end
-
-		return tbl6
-	end
-
-	local function fn8(arg, arg2, arg3)
-		local v2 = fn7(arg, arg2, arg3)
-		local tbl6 = {}
-
-		for i = 1, 16 do
-			tbl6[i] = v2[i]
-		end
-
-		fn6(tbl6)
-		local tbl7 = {}
-
-		for i = 1, 16 do
-			local n4 = (tbl6[i] + v2[i]) % n3
-			local n5 = (i - 1) * 4
-			tbl7[n5 + 1] = band(n4, 255)
-			tbl7[n5 + 2] = band(rshift(n4, 8), 255)
-			tbl7[n5 + 3] = band(rshift(n4, 16), 255)
-			tbl7[n5 + 4] = band(rshift(n4, 24), 255)
-		end
-
-		return tbl7
-	end
-
-	local function fn9(arg, arg2, arg3, arg4)
-		local tbl6 = {}
-		local n4 = 0
-
-		while n4 < arg4 do
-			local v2 = fn8(arg, arg3, arg2)
-
-			for i = 1, 64 do
-				if not (arg4 <= n4) then
-					n4 += 1
-					tbl6[n4] = v2[i]
-					continue
-				end
-
-				break
-			end
-
-			arg3 += 1
-		end
-
-		return tbl6
-	end
-
-	local function fn10(arg, arg2, arg3)
-		local v2 = fn7(arg, 4294967295, arg2)
-		fn6(v2)
-		local n4 = #arg3
-
-		for i = 0, n4 + (16 - n4 % 16) % 16 - 1, 16 do
-			for i2 = 0, 3 do
-				local n5 = i + 4 * i2
-				v2[i2 + 1] = bxor(v2[i2 + 1], (arg3[n5 + 1] or 0) + (arg3[n5 + 2] or 0) * 256 + (arg3[n5 + 3] or 0) * 65536 + (arg3[n5 + 4] or 0) * 16777216)
-			end
-
-			fn6(v2)
-		end
-
-		v2[1] = bxor(v2[1], n4)
-		fn6(v2)
-		local v3 = v2[1]
-		local tbl6 = {}
-		local v4 = band(v3, 255)
-		local v5 = band(rshift(v3, 8), 255)
-		local v6 = band(rshift(v3, 16), 255)
-		local v7 = rshift(v3, 24)
-		tbl6[1] = v4
-		tbl6[2] = v5
-		tbl6[3] = v6
-
-		do
-			local values = table.pack(band(v7, 255))
-			table.move(values, 1, values.n, 4, tbl6)
-		end
-
-		return tbl6
-	end
-
-	local tbl6 = {}
-
-	local function fn11(arg)
-		local str2 = table.concat(arg, ",")
-		if tbl6[str2] then
-			return tbl6[str2]
-		end
-		local v2 = fn9(arg, { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }, 11259375, 128)
-		local tbl7 = {}
-
-		for i = 1, 64 do
-			tbl7[i] = ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"):sub(i, i)
-		end
-
-		for i = 64, 2, -1 do
-			local n4 = i - 1
-			local n5 = (v2[2 * n4 + 1] * 256 + v2[2 * n4 + 2]) % i + 1
-			local v3 = tbl7[i]
-			tbl7[i] = tbl7[n5]
-			tbl7[n5] = v3
-		end
-
-		local str3 = table.concat(tbl7)
-		tbl6[str2] = str3
-		return str3
-	end
-
-	local function fn12(arg, arg2)
-		local tbl7 = {}
-		local n4 = #arg
-		local n5 = 1
-
-		while n5 <= n4 do
-			local v2 = arg[n5]
-			local v3 = arg[n5 + 1]
-			local v4 = arg[n5 + 2]
-			local v5 = rshift(v2, 2)
-			tbl7[#tbl7 + 1] = arg2:sub(v5 + 1, v5 + 1)
-			local n6 = lshift(band(v2, 3), 4) + rshift(v3 or 0, 4)
-			tbl7[#tbl7 + 1] = arg2:sub(n6 + 1, n6 + 1)
-
-			if v3 ~= nil then
-				local n7 = lshift(band(v3, 15), 2) + rshift(v4 or 0, 6)
-				tbl7[#tbl7 + 1] = arg2:sub(n7 + 1, n7 + 1)
-
-				if v4 ~= nil then
-					local v6 = band(v4, 63)
-					tbl7[#tbl7 + 1] = arg2:sub(v6 + 1, v6 + 1)
-					n5 += 3
-					continue
-				end
-			end
-
-			break
-		end
-
-		return table.concat(tbl7)
-	end
-
-	local function fn13(arg, arg2)
-		local tbl7 = {}
-
-		for i = 1, 64 do
-			tbl7[arg2:sub(i, i)] = i - 1
-		end
-
-		local tbl8 = {}
-
-		for i = 1, #arg do
-			local v2 = tbl7[arg:sub(i, i)]
-			if v2 == nil then
-				return nil
-			end
-			tbl8[#tbl8 + 1] = v2
-		end
-
-		local tbl9 = {}
-
-		for i = 1, #tbl8, 4 do
-			local v2 = tbl8[i]
-			local v3 = tbl8[i + 1]
-			local v4 = tbl8[i + 2]
-			local v5 = tbl8[i + 3]
-			if v3 == nil then
-				return nil
-			end
-			tbl9[#tbl9 + 1] = band(lshift(v2, 2) + rshift(v3, 4), 255)
-
-			if v4 ~= nil then
-				tbl9[#tbl9 + 1] = band(lshift(band(v3, 15), 4) + rshift(v4, 2), 255)
-			end
-
-			if v5 ~= nil then
-				tbl9[#tbl9 + 1] = band(lshift(band(v4, 3), 6) + v5, 255)
-			end
-		end
-
-		return tbl9
-	end
-
-	local v2 = fn("8992d555ed7846a562b058523100fbd0e59b5f6f28e98003230ffb4d9db60411")
-	local new = Random and Random.new and Random.new() or nil
-
-	local function fn14()
-		local tbl7 = {}
-
-		for i = 1, 8 do
-			tbl7[i] = new and new:NextInteger(0, 255) or math.random(0, 255)
-		end
-
-		return tbl7
-	end
-
-	tbl4.encode = function(arg, arg2, arg3)
-		arg2 = arg2 or v2
-		arg3 = arg3 or fn14()
-		local v3 = fn2(arg)
-		local tbl7 = {}
-
-		for i = 1, 8 do
-			tbl7[i] = arg3[i]
-		end
-
-		for i = n + 1, 12 do
-			tbl7[i] = 0
-		end
-
-		local v4 = fn9(arg2, tbl7, 1, #v3)
-		local tbl8 = {}
-
-		for i = 1, #v3 do
-			tbl8[i] = bxor(v3[i], v4[i])
-		end
-
-		local v5 = fn10(arg2, tbl7, tbl8)
-		local tbl9 = {}
-
-		for i = 1, 8 do
-			tbl9[#tbl9 + 1] = arg3[i]
-		end
-
-		for i = 1, 4 do
-			tbl9[#tbl9 + 1] = v5[i]
-		end
-
-		for i = 1, #tbl8 do
-			tbl9[#tbl9 + 1] = tbl8[i]
-		end
-
-		return str .. fn12(tbl9, fn11(arg2))
-	end
-
-	tbl4.decode = function(arg, arg2)
-		local v3 = arg2 or v2
-		if type(arg) ~= "string" or arg:sub(1, #str) ~= str then
-			return nil, "bad prefix"
-		end
-		local v4 = fn13(arg:sub(#str + 1), fn11(v3))
-		if not v4 or #v4 < n + n2 then
-			return nil, "malformed"
-		end
-		local tbl7 = {}
-
-		for i = 1, 8 do
-			tbl7[i] = v4[i]
-		end
-
-		for i = n + 1, 12 do
-			tbl7[i] = 0
-		end
-
-		local tbl8 = {}
-
-		for i = n + n2 + 1, #v4 do
-			tbl8[i - n - n2] = v4[i]
-		end
-
-		local v5 = fn10(v3, tbl7, tbl8)
-		local n4 = 0
-
-		for i = 1, 4 do
-			n4 += v5[i] == v4[n + i] and 0 or 1
-		end
-
-		if n4 ~= 0 then
-			return nil, "bad tag"
-		end
-		local v6 = fn9(v3, tbl7, 1, #tbl8)
-		local tbl9 = {}
-
-		for i = 1, #tbl8 do
-			tbl9[i] = bxor(tbl8[i], v6[i])
-		end
-
-		return fn3(tbl9)
-	end
-
-	tbl4.decodeJobId = function(arg, arg2)
-		local v3, v4 = tbl4.decode(arg, arg2)
-		if not v3 then
-			return nil, v4
-		end
-
-		if not v3:match("^%x%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x$") then
-			return nil, "not a JobId"
-		end
-		return v3
-	end
-
-	return tbl4
+local tbl5 = {
+	White = Color3.fromRGB(240, 240, 240),
+	Red = Color3.fromRGB(255, 70, 70),
+	Green = Color3.fromRGB(80, 230, 120),
+	Blue = Color3.fromRGB(80, 160, 255),
+	Yellow = Color3.fromRGB(255, 215, 70),
+	Purple = Color3.fromRGB(180, 110, 255),
+	Cyan = Color3.fromRGB(70, 220, 230),
+}
+
+local tbl6 = { "White", "Red", "Green", "Blue", "Yellow", "Purple", "Cyan" }
+Aura = { swings = 0, note = "Off" }
+Move = { on = false, clip = {} }
+Gun = { shots = 0, note = "Off", aimUntil = 0 }
+Fly = { note = "Off", slowUntil = 0, rubber = 0, angle = 0, step = 0 }
+Hit = { orig = {} }
+Esp = { pool = {} }
+UI = {}
+
+bind = function(arg)
+	tbl2[#tbl2 + 1] = arg
+	return arg
 end
 
-tbl3.Module.PlayerMD = function()
-	local tbl4
+spin = function(arg, arg2, arg3)
+	task.spawn(function()
+		local v5 = nil
 
-	tbl4 = {
-		GetHumanoid = function()
-			if players and players.Character then
-				return players.Character:FindFirstChild("Humanoid")
-			end
-		end,
-		GetHRP = function()
-			local v2 = tbl4.GetHumanoid()
-			if players and players.Character and v2 and v2.Health > 0 then
-				return players.Character:FindFirstChild("HumanoidRootPart")
-			end
-		end,
-	}
+		while flag do
+			local ok, result, result2 = pcall(arg3)
+			local flag5 = not ok and result or result == false and result2 or nil
 
-	return tbl4
-end
-
-tbl3.Module.TweenModules = function()
-	local tbl4
-
-	tbl4 = {
-		GetDistance = function(arg, arg2, arg3)
-			local v2 = tbl3.Module.PlayerMD.GetHRP()
-			if not arg or not v2 then
-				return
-			end
-			local position = typeof(arg) == "CFrame" and arg.Position or arg
-
-			if arg2 then
-				arg2 = typeof(arg2) == "CFrame" and arg2.Position or arg2
+			if flag5 and flag5 ~= v5 then
+				local v6 = warn
+				local str = ("! %*: %*"):format(arg, flag5)
+				v6(str)
 			end
 
-			arg2 = arg2 or v2.Position
-			return (Vector3.new(position.X, arg3 and 0 or position.Y, position.Z) - Vector3.new(arg2.X, arg3 and 0 or arg2.Y, arg2.Z)).Magnitude
-		end,
-		EnableNoClip = function()
-			for _, descendant in pairs(players.Character:GetDescendants()) do
-				if descendant:IsA("BasePart") then
-					descendant.CanCollide = false
-				end
-			end
-		end,
-		ToggleBodyVelocity = function(arg)
-			local v2 = tbl3.Module.PlayerMD.GetHRP()
-
-			if arg then
-				if v2 and not v2:FindFirstChild("BodyVelocity") then
-					local bodyVelocity = Instance.new("BodyVelocity")
-					bodyVelocity.Name = "BodyVelocity"
-					bodyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
-					bodyVelocity.Velocity = Vector3.zero
-					bodyVelocity.P = 15000
-					bodyVelocity.Parent = v2
-				end
-			elseif v2 and v2:FindFirstChild("BodyVelocity") then
-				v2.BodyVelocity:Destroy()
-			end
-		end,
-		StartTween = function(cFrame)
-			if not cFrame then
-				return
-			end
-			local v2 = tbl3.Module.PlayerMD.GetHRP()
-			local v3 = tbl3.Module.PlayerMD.GetHumanoid()
-
-			if players and v2 and v3 and v3.Health > 0 then
-				local v4 = tbl4.GetDistance(cFrame)
-
-				if v4 <= 30 then
-					if v.Tween then
-						v.Tween:Cancel()
-					end
-
-					v2.CFrame = cFrame
-					return
-				end
-
-				v.Tween = tweenService:Create(v2, TweenInfo.new(v4 / (tonumber(tbl2["Tween Speed"]) or 300), Enum.EasingStyle.Linear), { CFrame = cFrame })
-				v.Tween:Play()
-			end
-		end,
-		TP = function(arg, arg2)
-			if arg2 then
-				tbl4.EnableNoClip()
-			end
-
-			tbl4.ToggleBodyVelocity(arg2)
-			tbl4.StartTween(arg)
-		end,
-	}
-
-	return tbl4
-end
-
-tbl3.Module.BypassTP = function()
-	local n = 2000
-	local n2 = 10000
-	local n3 = 1000
-	local n4 = 5
-	local n5 = 20
-	local tbl4 = { "Fist of Darkness", "God's Chalice", "Sweet Chalice" }
-	local tbl5 = { Bypassing = false, Count = 0, CombatLabel = nil }
-
-	local function fn(arg)
-		local backpack = players:FindFirstChild("Backpack")
-		if backpack and backpack:FindFirstChild(arg) then
-			return true
+			task.wait(type(arg2) == "function" and arg2() or arg2)
+			v5 = flag5
 		end
-		local character = players.Character
-		return character ~= nil and character:FindFirstChild(arg) ~= nil
-	end
-
-	local function fn2()
-		local combatLabel = tbl5.CombatLabel
-		if combatLabel and combatLabel.Parent then
-			return combatLabel
-		end
-		local playerGui = players:FindFirstChild("PlayerGui")
-		playerGui = playerGui and playerGui:FindFirstChild("Main")
-		if not playerGui then
-			return nil
-		end
-		local bottomHUDList = playerGui:FindFirstChild("BottomHUDList")
-		bottomHUDList = bottomHUDList and bottomHUDList:FindFirstChild("InCombat") or playerGui:FindFirstChild("InCombat") or playerGui:FindFirstChild("InCombat", true)
-		tbl5.CombatLabel = bottomHUDList
-		return bottomHUDList
-	end
-
-	local function fn3()
-		local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
-		worldOrigin = worldOrigin and worldOrigin:FindFirstChild("PlayerSpawns")
-		if not worldOrigin then
-			return nil
-		end
-		local name = players.Team and players.Team.Name or v.KaitunFruit.Team
-		return name and worldOrigin:FindFirstChild(name) or worldOrigin:FindFirstChild("Pirates")
-	end
-
-	local tbl6
-
-	tbl6 = {
-		Runtime = tbl5,
-		Distance = 3500,
-		InCombat = function()
-			local v2 = fn2()
-			return v2 ~= nil and v2.Visible and v2.Text:lower():find("risk!") ~= nil
-		end,
-		GetBypassCFrame = function(arg)
-			local v2 = fn3()
-			if not v2 then
-				return nil
-			end
-			local v3 = tbl3.Module.PlayerMD.GetHRP()
-			if not v3 then
-				return nil
-			end
-			local position = v3.Position
-			local children = v2:GetChildren()
-			local magnitude = (arg - position).Magnitude
-			local huge = math.huge
-			local cFrame = nil
-			local name = nil
-
-			for i = 1, #children do
-				local part = children[i]:FindFirstChild("Part")
-
-				if part then
-					local magnitude2 = (part.Position - arg).Magnitude
-					local magnitude3 = Vector3.new(part.Position.X - position.X, 0, part.Position.Z - position.Z).Magnitude
-
-					if magnitude2 <= huge and magnitude2 + n3 <= magnitude and magnitude3 <= n2 and magnitude3 >= n then
-						cFrame = part.CFrame
-						name = children[i].Name
-						huge = magnitude2
-					end
-				end
-			end
-
-			return cFrame, name
-		end,
-		CanBypass = function()
-			if not tbl2["Bypass Teleport"] then
-				return false
-			end
-
-			if n4 <= tbl5.Count then
-				return false
-			end
-
-			if tbl6.InCombat() then
-				return false
-			end
-
-			for i = 1, #tbl4 do
-				if fn(tbl4[i]) then
-					return false
-				end
-			end
-
-			return true
-		end,
-		ResetCount = function()
-			tbl5.Count = 0
-		end,
-		Start = function(arg)
-			if tbl5.Bypassing or not tbl6.CanBypass() then
-				return false
-			end
-			local v2, v3 = tbl6.GetBypassCFrame(arg)
-			if not v2 or not v3 then
-				return false
-			end
-			tbl5.Bypassing = true
-
-			if v.Tween then
-				pcall(function()
-					v.Tween:Cancel()
-				end)
-			end
-
-			tbl3.SetStatus("Bypass to " .. v3)
-
-			task.spawn(function()
-				pcall(function()
-					local v4 = tbl3.Module.PlayerMD.GetHumanoid()
-					local v5 = tbl3.Module.PlayerMD.GetHRP()
-					if not v4 or not v5 then
-						return
-					end
-					v5.Anchored = true
-
-					while true do
-						task.wait()
-						v4.Health = 0
-						replicatedStorage.Remotes.CommF_:InvokeServer("SetLastSpawnPoint", v3)
-						local character = players.Character
-
-						if character then
-							character:PivotTo(v2)
-						end
-
-						if v5.Parent then
-							v5.Anchored = false
-						end
-
-						task.wait(1)
-						if not (v4.Health <= 0 or not v4.Parent or not tbl6.CanBypass()) then
-							continue
-						end
-						break
-					end
-
-					tbl5.Count = tbl5.Count + 1
-				end)
-
-				local n6 = os.clock() + n5
-
-				while true do
-					task.wait()
-					if not (tbl3.Module.PlayerMD.GetHRP() or os.clock() > n6) then
-						continue
-					end
-					break
-				end
-
-				tbl5.Bypassing = false
-				tbl3.SetStatus("Bypass done, count: " .. tostring(tbl5.Count))
-			end)
-
-			return true
-		end,
-	}
-
-	return tbl6
-end
-
-tbl3.Authenticate = function()
-	local tbl4
-
-	tbl4 = {
-		Whitelisted = false,
-		IsPremiumUser = false,
-		StartKeySystemUI = function(arg, arg2)
-			local hui = gethui and gethui() or game:GetService("CoreGui")
-
-			local tbl5 = {
-				Tiktok = "https://tiktok.com/@luongminhnghia_",
-				Discord = "",
-				Youtube = "https://www.youtube.com/@NightXHub",
-				Key1 = "https://link4m.com/Dmy9aqB",
-				Key2 = "https://link4sub.com/NZFaNSJkIL",
-			}
-
-			if hui:FindFirstChild("KeyUi") then
-				hui:FindFirstChild("KeyUi"):Destroy()
-			end
-
-			local screenGui = Instance.new("ScreenGui")
-			local canvasGroup = Instance.new("CanvasGroup")
-			local frame = Instance.new("Frame")
-			local uiCorner = Instance.new("UICorner")
-			local uiStroke = Instance.new("UIStroke")
-			local imageLabel = Instance.new("ImageLabel")
-			local textLabel = Instance.new("TextLabel")
-			local textLabel2 = Instance.new("TextLabel")
-			local frame2 = Instance.new("Frame")
-			local imageLabel2 = Instance.new("ImageLabel")
-			local frame3 = Instance.new("Frame")
-			local frame4 = Instance.new("Frame")
-			local uiCorner2 = Instance.new("UICorner")
-			local uiStroke2 = Instance.new("UIStroke")
-			local textBox = Instance.new("TextBox")
-			local imageLabel3 = Instance.new("ImageLabel")
-			local frame5 = Instance.new("Frame")
-			local textButton = Instance.new("TextButton")
-			local uiCorner3 = Instance.new("UICorner")
-			local uiStroke3 = Instance.new("UIStroke")
-			local textLabel3 = Instance.new("TextLabel")
-			local textButton2 = Instance.new("TextButton")
-			local uiCorner4 = Instance.new("UICorner")
-			local uiStroke4 = Instance.new("UIStroke")
-			local textLabel4 = Instance.new("TextLabel")
-			local textButton3 = Instance.new("TextButton")
-			local uiCorner5 = Instance.new("UICorner")
-			local uiStroke5 = Instance.new("UIStroke")
-			local textLabel5 = Instance.new("TextLabel")
-			local frame6 = Instance.new("Frame")
-			local uiListLayout = Instance.new("UIListLayout")
-			local textButton4 = Instance.new("TextButton")
-			local uiCorner6 = Instance.new("UICorner")
-			local uiStroke6 = Instance.new("UIStroke")
-			local textLabel6 = Instance.new("TextLabel")
-			local textButton5 = Instance.new("TextButton")
-			local uiCorner7 = Instance.new("UICorner")
-			local uiStroke7 = Instance.new("UIStroke")
-			local textLabel7 = Instance.new("TextLabel")
-			local textButton6 = Instance.new("TextButton")
-			local uiCorner8 = Instance.new("UICorner")
-			local uiStroke8 = Instance.new("UIStroke")
-			local textLabel8 = Instance.new("TextLabel")
-			local frame7 = Instance.new("Frame")
-			local uiCorner9 = Instance.new("UICorner")
-			local uiGradient = Instance.new("UIGradient")
-			screenGui.Name = "KeyUi"
-			screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-			screenGui.Parent = hui
-			canvasGroup.BorderSizePixel = 0
-			canvasGroup.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			canvasGroup.AnchorPoint = Vector2.new(0.5, 0.5)
-			canvasGroup.Size = UDim2.new(0, 365, 0, 415)
-			canvasGroup.Position = UDim2.new(0.5, 0, 0.3, 0)
-			canvasGroup.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			canvasGroup.BackgroundTransparency = 1
-			canvasGroup.Parent = screenGui
-			canvasGroup.GroupTransparency = 1
-			MakeDraggable(canvasGroup, canvasGroup)
-			frame.BorderSizePixel = 0
-			frame.BackgroundColor3 = Color3.fromRGB(17, 17, 17)
-			frame.AnchorPoint = Vector2.new(0.5, 0.5)
-			frame.Size = UDim2.new(1, -15, 1, -15)
-			frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-			frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			frame.Name = "Main"
-			frame.BackgroundTransparency = 0.4
-			frame.Parent = canvasGroup
-			uiCorner.CornerRadius = UDim.new(0, 15)
-			uiCorner.Parent = frame
-			uiStroke.Transparency = 0.9
-			uiStroke.Color = Color3.fromRGB(255, 255, 255)
-			uiStroke.Parent = frame
-			imageLabel.BorderSizePixel = 0
-			imageLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			imageLabel.Image = "rbxassetid://118583787829543"
-			imageLabel.Size = UDim2.new(0, 55, 0, 55)
-			imageLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			imageLabel.BackgroundTransparency = 1
-			imageLabel.Name = "LogoScript"
-			imageLabel.Position = UDim2.new(0, 15, 0, 15)
-			imageLabel.Parent = frame
-			textLabel.TextWrapped = true
-			textLabel.BorderSizePixel = 0
-			textLabel.TextSize = 23
-			textLabel.TextXAlignment = Enum.TextXAlignment.Left
-			textLabel.TextYAlignment = Enum.TextYAlignment.Top
-			textLabel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel.BackgroundTransparency = 1
-			textLabel.Size = UDim2.new(0, 300, 0, 20)
-			textLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textLabel.Text = "NIGHT HUB KEY SYSTEM"
-			textLabel.Name = "TitleKey"
-			textLabel.Position = UDim2.new(0, 75, 0, 20)
-			textLabel.Parent = frame
-			textLabel2.TextWrapped = true
-			textLabel2.BorderSizePixel = 0
-			textLabel2.TextSize = 13
-			textLabel2.TextXAlignment = Enum.TextXAlignment.Left
-			textLabel2.TextTransparency = 0.5
-			textLabel2.TextYAlignment = Enum.TextYAlignment.Top
-			textLabel2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel2.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			textLabel2.TextColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel2.BackgroundTransparency = 1
-			textLabel2.Size = UDim2.new(0, 300, 0, 20)
-			textLabel2.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textLabel2.Text = "THE AUTHENTICATE SYSTEM"
-			textLabel2.Name = "IDKKey"
-			textLabel2.Position = UDim2.new(0, 75, 0, 42)
-			textLabel2.Parent = frame
-			frame2.ZIndex = 0
-			frame2.BorderSizePixel = 0
-			frame2.Size = UDim2.new(1, 0, 1, 0)
-			frame2.Name = "DropShadowHolder"
-			frame2.BackgroundTransparency = 1
-			frame2.Parent = frame
-			imageLabel2.ZIndex = 0
-			imageLabel2.BorderSizePixel = 0
-			imageLabel2.SliceCenter = Rect.new(49, 49, 450, 450)
-			imageLabel2.ScaleType = Enum.ScaleType.Slice
-			imageLabel2.ImageTransparency = 0.5
-			imageLabel2.ImageColor3 = Color3.fromRGB(0, 0, 0)
-			imageLabel2.AnchorPoint = Vector2.new(0.5, 0.5)
-			imageLabel2.Image = "rbxassetid://6014261993"
-			imageLabel2.Size = UDim2.new(1, 47, 1, 47)
-			imageLabel2.BackgroundTransparency = 1
-			imageLabel2.Name = "DropShadow"
-			imageLabel2.Position = UDim2.new(0.5, 0, 0.5, 0)
-			imageLabel2.Parent = frame2
-			frame3.BorderSizePixel = 0
-			frame3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			frame3.Size = UDim2.new(1, -50, 1, -90)
-			frame3.Position = UDim2.new(0, 25, 0, 80)
-			frame3.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			frame3.Name = "Container"
-			frame3.BackgroundTransparency = 1
-			frame3.Parent = frame
-			frame4.BorderSizePixel = 0
-			frame4.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			frame4.Size = UDim2.new(1, 0, 0, 50)
-			frame4.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			frame4.Name = "KeyFrame"
-			frame4.BackgroundTransparency = 0.95
-			frame4.Parent = frame3
-			uiCorner2.CornerRadius = UDim.new(0, 12)
-			uiCorner2.Parent = frame4
-			uiStroke2.Transparency = 0.9
-			uiStroke2.Color = Color3.fromRGB(255, 255, 255)
-			uiStroke2.Parent = frame4
-			textBox.Name = "EnterKeyBox"
-			textBox.TextXAlignment = Enum.TextXAlignment.Left
-			textBox.PlaceholderColor3 = Color3.fromRGB(145, 145, 145)
-			textBox.BorderSizePixel = 0
-			textBox.TextSize = 14
-			textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-			textBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textBox.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			textBox.ClipsDescendants = true
-			textBox.PlaceholderText = "Enter Key..."
-			textBox.Size = UDim2.new(1, -50, 1, -5)
-			textBox.Position = UDim2.new(0, 50, 0, 2)
-			textBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textBox.Text = ""
-			textBox.BackgroundTransparency = 1
-			textBox.Parent = frame4
-			imageLabel3.BorderSizePixel = 0
-			imageLabel3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			imageLabel3.ImageTransparency = 0.5
-			imageLabel3.AnchorPoint = Vector2.new(0, 0.5)
-			imageLabel3.Image = "rbxassetid://83924775363502"
-			imageLabel3.Size = UDim2.new(0, 23, 0, 23)
-			imageLabel3.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			imageLabel3.BackgroundTransparency = 1
-			imageLabel3.Name = "KeyIcon"
-			imageLabel3.Position = UDim2.new(0, 15, 0.5, 0)
-			imageLabel3.Parent = frame4
-			frame5.BorderSizePixel = 0
-			frame5.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			frame5.Size = UDim2.new(1, 0, 0, 45)
-			frame5.Position = UDim2.new(0, 0, 0, 60)
-			frame5.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			frame5.Name = "GetKeyFrame"
-			frame5.BackgroundTransparency = 1
-			frame5.Parent = frame3
-			textButton.BorderSizePixel = 0
-			textButton.AutoButtonColor = false
-			textButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textButton.Selectable = false
-			textButton.BackgroundTransparency = 0.95
-			textButton.Size = UDim2.new(0.48, 0, 1, -5)
-			textButton.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textButton.Text = ""
-			textButton.Name = "ButtonKeyServer1"
-			textButton.Position = UDim2.new(0, 0, 0, 3)
-			textButton.Parent = frame5
-			uiCorner3.CornerRadius = UDim.new(0, 15)
-			uiCorner3.Parent = textButton
-			uiStroke3.Transparency = 0.9
-			uiStroke3.Color = Color3.fromRGB(255, 255, 255)
-			uiStroke3.Parent = textButton
-			textLabel3.BorderSizePixel = 0
-			textLabel3.TextSize = 13
-			textLabel3.TextTransparency = 0.3
-			textLabel3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel3.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			textLabel3.TextColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel3.BackgroundTransparency = 1
-			textLabel3.AnchorPoint = Vector2.new(0.5, 0.5)
-			textLabel3.Size = UDim2.new(1, -20, 1, -20)
-			textLabel3.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textLabel3.Text = "GETKEY SERVER 1"
-			textLabel3.Name = "Sibidi"
-			textLabel3.Position = UDim2.new(0.5, 0, 0.5, 0)
-			textLabel3.Parent = textButton
-			textButton2.BorderSizePixel = 0
-			textButton2.AutoButtonColor = false
-			textButton2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textButton2.Selectable = false
-			textButton2.BackgroundTransparency = 0.95
-			textButton2.Size = UDim2.new(0.48, 0, 1, -5)
-			textButton2.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textButton2.Text = ""
-			textButton2.Name = "ButtonKeyServer2"
-			textButton2.Position = UDim2.new(0.52, 0, 0, 3)
-			textButton2.Parent = frame5
-			uiCorner4.CornerRadius = UDim.new(0, 15)
-			uiCorner4.Parent = textButton2
-			uiStroke4.Transparency = 0.9
-			uiStroke4.Color = Color3.fromRGB(255, 255, 255)
-			uiStroke4.Parent = textButton2
-			textLabel4.BorderSizePixel = 0
-			textLabel4.TextSize = 13
-			textLabel4.TextTransparency = 0.3
-			textLabel4.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel4.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			textLabel4.TextColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel4.BackgroundTransparency = 1
-			textLabel4.AnchorPoint = Vector2.new(0.5, 0.5)
-			textLabel4.Size = UDim2.new(1, -20, 1, -20)
-			textLabel4.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textLabel4.Text = "GETKEY SERVER 2"
-			textLabel4.Name = "Sibidi"
-			textLabel4.Position = UDim2.new(0.5, 0, 0.5, 0)
-			textLabel4.Parent = textButton2
-			textButton3.BorderSizePixel = 0
-			textButton3.AutoButtonColor = false
-			textButton3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textButton3.Selectable = false
-			textButton3.BackgroundTransparency = 0.95
-			textButton3.Size = UDim2.new(1, 0, 0, 40)
-			textButton3.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textButton3.Text = ""
-			textButton3.Name = "ButtonSubmitKey"
-			textButton3.Position = UDim2.new(0, 0, 0, 50)
-			textButton3.Parent = frame5
-			uiCorner5.CornerRadius = UDim.new(0, 15)
-			uiCorner5.Parent = textButton3
-			uiStroke5.Transparency = 0.9
-			uiStroke5.Color = Color3.fromRGB(255, 255, 255)
-			uiStroke5.Parent = textButton3
-			textLabel5.BorderSizePixel = 0
-			textLabel5.TextSize = 13
-			textLabel5.TextTransparency = 0.3
-			textLabel5.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel5.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			textLabel5.TextColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel5.BackgroundTransparency = 1
-			textLabel5.AnchorPoint = Vector2.new(0.5, 0.5)
-			textLabel5.Size = UDim2.new(1, -20, 1, -20)
-			textLabel5.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textLabel5.Text = "Submit Key"
-			textLabel5.Name = "Sibidi"
-			textLabel5.Position = UDim2.new(0.5, 0, 0.5, 0)
-			textLabel5.Parent = textButton3
-			frame6.BorderSizePixel = 0
-			frame6.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			frame6.Size = UDim2.new(1, 0, 1, -160)
-			frame6.Position = UDim2.new(0, 0, 0, 160)
-			frame6.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			frame6.Name = "IDK"
-			frame6.BackgroundTransparency = 1
-			frame6.Parent = frame3
-			uiListLayout.Padding = UDim.new(0, 5)
-			uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-			uiListLayout.Parent = frame6
-			textButton4.BorderSizePixel = 0
-			textButton4.AutoButtonColor = false
-			textButton4.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-			textButton4.Selectable = false
-			textButton4.BackgroundTransparency = 0.5
-			textButton4.Size = UDim2.new(1, 0, 0, 45)
-			textButton4.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textButton4.Text = ""
-			textButton4.Name = "YouTubeButton"
-			textButton4.Position = UDim2.new(0, 0, 0, 3)
-			textButton4.Parent = frame6
-			uiCorner6.CornerRadius = UDim.new(0, 15)
-			uiCorner6.Parent = textButton4
-			uiStroke6.Transparency = 0.9
-			uiStroke6.Color = Color3.fromRGB(255, 255, 255)
-			uiStroke6.Parent = textButton4
-			textLabel6.BorderSizePixel = 0
-			textLabel6.TextSize = 13
-			textLabel6.TextTransparency = 0.3
-			textLabel6.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel6.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			textLabel6.TextColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel6.BackgroundTransparency = 1
-			textLabel6.AnchorPoint = Vector2.new(0.5, 0.5)
-			textLabel6.Size = UDim2.new(1, -20, 1, -20)
-			textLabel6.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textLabel6.Text = "Youtube"
-			textLabel6.Name = "Sibidi"
-			textLabel6.Position = UDim2.new(0.5, 0, 0.5, 0)
-			textLabel6.Parent = textButton4
-			textButton5.BorderSizePixel = 0
-			textButton5.AutoButtonColor = false
-			textButton5.BackgroundColor3 = Color3.fromRGB(4, 4, 255)
-			textButton5.Selectable = false
-			textButton5.BackgroundTransparency = 0.5
-			textButton5.Size = UDim2.new(1, 0, 0, 45)
-			textButton5.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textButton5.Text = ""
-			textButton5.Name = "DiscordButton"
-			textButton5.Position = UDim2.new(0, 0, 0, 3)
-			textButton5.Parent = frame6
-			uiCorner7.CornerRadius = UDim.new(0, 15)
-			uiCorner7.Parent = textButton5
-			uiStroke7.Transparency = 0.9
-			uiStroke7.Color = Color3.fromRGB(255, 255, 255)
-			uiStroke7.Parent = textButton5
-			textLabel7.BorderSizePixel = 0
-			textLabel7.TextSize = 13
-			textLabel7.TextTransparency = 0.3
-			textLabel7.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel7.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			textLabel7.TextColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel7.BackgroundTransparency = 1
-			textLabel7.AnchorPoint = Vector2.new(0.5, 0.5)
-			textLabel7.Size = UDim2.new(1, -20, 1, -20)
-			textLabel7.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textLabel7.Text = "Discord"
-			textLabel7.Name = "Sibidi"
-			textLabel7.Position = UDim2.new(0.5, 0, 0.5, 0)
-			textLabel7.Parent = textButton5
-			textButton6.BorderSizePixel = 0
-			textButton6.AutoButtonColor = false
-			textButton6.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-			textButton6.Selectable = false
-			textButton6.BackgroundTransparency = 0.5
-			textButton6.Size = UDim2.new(1, 0, 0, 45)
-			textButton6.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textButton6.Text = ""
-			textButton6.Name = "TiktokButton"
-			textButton6.Position = UDim2.new(0, 0, 0, 3)
-			textButton6.Parent = frame6
-			uiCorner8.CornerRadius = UDim.new(0, 15)
-			uiCorner8.Parent = textButton6
-			uiStroke8.Transparency = 0.9
-			uiStroke8.Color = Color3.fromRGB(255, 255, 255)
-			uiStroke8.Parent = textButton6
-			textLabel8.BorderSizePixel = 0
-			textLabel8.TextSize = 13
-			textLabel8.TextTransparency = 0.3
-			textLabel8.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel8.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-			textLabel8.TextColor3 = Color3.fromRGB(255, 255, 255)
-			textLabel8.BackgroundTransparency = 1
-			textLabel8.AnchorPoint = Vector2.new(0.5, 0.5)
-			textLabel8.Size = UDim2.new(1, -20, 1, -20)
-			textLabel8.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			textLabel8.Text = "Tiktok"
-			textLabel8.Name = "Sibidi"
-			textLabel8.Position = UDim2.new(0.5, 0, 0.5, 0)
-			textLabel8.Parent = textButton6
-			frame7.ZIndex = -999
-			frame7.BorderSizePixel = 0
-			frame7.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-			frame7.Size = UDim2.new(1, 0, 0, 100)
-			frame7.Position = UDim2.new(0, 0, 1, -100)
-			frame7.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			frame7.Name = "Gradient"
-			frame7.BackgroundTransparency = 0.8
-			frame7.Parent = frame
-			uiCorner9.CornerRadius = UDim.new(0, 15)
-			uiCorner9.Parent = frame7
-			uiGradient.Rotation = 90
-			uiGradient.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) })
-
-			uiGradient.Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
-				ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255)),
-			})
-
-			uiGradient.Parent = frame7
-			local TweenService = game:GetService("TweenService")
-			TweenService:Create(canvasGroup, TweenInfo.new(1, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), { GroupTransparency = 0, Position = UDim2.new(0.5, 0, 0.5, 0) }):Play()
-
-			local function fn(arg3, arg4, arg5)
-				local n = arg5 or 0.95
-				local backgroundTransparency = arg3.BackgroundTransparency
-
-				arg3.MouseEnter:Connect(function()
-					local tbl6 = { BackgroundTransparency = n }
-					TweenService:Create(arg3, TweenInfo.new(0.4, Enum.EasingStyle.Quad), tbl6):Play()
-					TweenService:Create(arg4, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), { TextTransparency = 0 }):Play()
-				end)
-
-				arg3.MouseLeave:Connect(function()
-					local tbl6 = { BackgroundTransparency = backgroundTransparency }
-					TweenService:Create(arg3, TweenInfo.new(0.4, Enum.EasingStyle.Quad), tbl6):Play()
-					TweenService:Create(arg4, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), { TextTransparency = 0.3 }):Play()
-				end)
-			end
-
-			fn(textButton3, textLabel5)
-			fn(textButton, textLabel3)
-			fn(textButton2, textLabel4)
-			fn(textButton4, textLabel6, 0.4)
-			fn(textButton5, textLabel7, 0.4)
-			fn(textButton6, textLabel8, 0.4)
-
-			textButton3.Activated:Connect(function()
-				arg(textBox.Text, false)
-			end)
-
-			textButton.Activated:Connect(function()
-				arg2:Notify({ Title = "Authenticate System", Content = "Link Get key 1 Copied!", Duration = 10 })
-				setclipboard(tbl5.Key1)
-			end)
-
-			textButton2.Activated:Connect(function()
-				arg2:Notify({ Title = "Authenticate System", Content = "Link Get key 2 Copied!", Duration = 10 })
-				setclipboard(tbl5.Key2)
-			end)
-
-			textButton4.Activated:Connect(function()
-				setclipboard(tbl5.Youtube)
-			end)
-
-			textButton5.Activated:Connect(function()
-				setclipboard(tbl5.Discord)
-			end)
-
-			textButton6.Activated:Connect(function()
-				setclipboard(tbl5.Tiktok)
-			end)
-
-			textBox.Focused:Connect(function()
-				TweenService:Create(uiStroke2, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), { Transparency = 0.75 }):Play()
-				TweenService:Create(imageLabel3, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), { ImageTransparency = 0 }):Play()
-			end)
-
-			textBox.FocusLost:Connect(function()
-				TweenService:Create(uiStroke2, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), { Transparency = 0.9 }):Play()
-				TweenService:Create(imageLabel3, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.InOut), { ImageTransparency = 0.5 }):Play()
-			end)
-		end,
-		DeleteKeyUi = function()
-			local hui = gethui and gethui() or game:GetService("CoreGui")
-
-			if hui and hui:FindFirstChild("KeyUi") then
-				hui:FindFirstChild("KeyUi"):Destroy()
-			end
-		end,
-		savekey = function(arg)
-			writefile("NightHubKey.bin", tostring(arg))
-		end,
-		readkey = function()
-			if not isfile("NightHubKey.bin") then
-				return false, nil
-			end
-			return true, readfile("NightHubKey.bin")
-		end,
-		decodeResponse = function(arg)
-			if not arg or type(arg) ~= "string" then
-				return false, "no response Body or response Body is not a string"
-			end
-			local ok, result = pcall(httpService.JSONDecode, httpService, arg)
-			if not ok then
-				return false, "failed to decode response Body as JSON"
-			end
-			return true, result
-		end,
-		checkhooked = function()
-			local v2 = isfunctionhooked
-			if not v2 then
-				return false, "no isfunctionhooked function found"
-			end
-			local ok, result = pcall(v2, request)
-			if not ok then
-				return false, "failed to check if request is hooked"
-			end
-
-			if result then
-				return false, "request function is hooked"
-			end
-			return true, nil
-		end,
-		StartAuthentication = function(arg, arg2, arg3)
-			if not arg or not arg2 then
-				return false, "Missing Key or Hwid"
-			end
-			local v2, v3 = tbl4.checkhooked()
-			if not v2 then
-				players:Kick("[Authenticate System]\n" .. v3)
-				return false, v3
-			end
-			local str = identifyexecutor() or "nil"
-			local str2 = httpService:GenerateGUID():sub(1, 8)
-			local v4 = arg2 or gethwid()
-			local userId = players.UserId
-			local gameId = game.GameId
-			local now = tick()
-			local str3 = string.format("%scheck?sign=%s&key=%s&hwid=%s&executor=%s&time=%s", "http://160.250.135.231/auth/", (str2 .. userId .. gameId):lower(), arg, v4, str, now)
-
-			local ok, result = pcall(function()
-				return request({ Url = str3, Method = "GET" })
-			end)
-
-			if not ok then
-				return false, "Failed to send request to API or request is blocked"
-			end
-
-			if not result or result.StatusCode ~= 200 then
-				result = result and result.StatusCode or "502"
-				return false, "Failed to get valid response from API or API is down\n Status Code: " .. result
-			end
-			local v5, v6 = tbl3.Module.Encrypt.decode(result.Body, KEY)
-			if not v5 then
-				return false, "Failed to Decode Response from API or Response is Invalid"
-			end
-			local v7, v8 = tbl4.decodeResponse(v6)
-			if not v7 then
-				return false, v8
-			end
-
-			if not v8.status or v8.status ~= true then
-				return false, v8.message or "Invalid Response from API"
-			end
-
-			if v8.status == true and v8.message == "Auth Success!" and v8.hash and tostring(v8.key) == tostring(arg) then
-				local ok2, result2 = pcall(function()
-					return request({
-						Url = string.format("%sstep2?key=%s&hwid=%s&hash=%s", "http://160.250.135.231/auth/", arg, v4, v8.hash),
-						Method = "GET",
-					})
-				end)
-
-				if not ok2 then
-					return false, "Failed to send request to API or request is blocked"
-				end
-
-				if not result2 or result2.StatusCode ~= 200 then
-					result2 = result2 and tostring(result2.StatusCode) or "502"
-					return false, "Failed to get valid response from API or API is down\n Status Code: " .. result2
-				end
-				local v9, v10 = tbl3.Module.Encrypt.decode(result2.Body, KEY)
-				if not v9 then
-					return false, "Failed to Decode Response from API or Response is Invalid"
-				end
-				local v11, v12 = tbl4.decodeResponse(v10)
-				if not v11 then
-					return false, v12
-				end
-
-				if not v12.hash or v8.hash ~= v12.hash then
-					return false, "Hash mismatch"
-				end
-
-				if not v12.key or v12.key ~= arg then
-					return false, "Key mismatch"
-				end
-
-				if v8.ispremium and v8.ispremium ~= true and arg3 == true then
-					return false, "This Key is not Premium"
-				end
-				local ispremium = v8.ispremium or false
-				tbl4.savekey(arg)
-				return true, "Authentication Successful!", ispremium
-			end
-
-			return false, "Invalid Response from API"
-		end,
-		Start = function(arg, arg2)
-			local now = tick()
-			print("[Time]", "Starting Authenticate")
-			local v2, v3, v4 = tbl4.StartAuthentication(arg, gethwid(), arg2)
-
-			if not v2 then
-				if isfile("NightHubKey.bin") then
-					delfile("NightHubKey.bin")
-				end
-
-				tbl4.Whitelisted = false
-				players:Kick("[Authenticate System]\n" .. v3)
-			else
-				Library:Notify({ Title = "Authenticate System", Content = v3, Duration = 8 })
-				tbl4.IsPremiumUser = v4
-				tbl4.Whitelisted = true
-			end
-
-			print("[Time]", "Authenticated in " .. tostring(tick() - now) .. " seconds")
-		end,
-		StartKeySystem = function(arg)
-			print("[Authenticate]", "Start Key System")
-			local v2, v3 = tbl4.readkey()
-
-			if v2 and v3 then
-				tbl4.Start(v3, arg)
-			else
-				tbl4.StartKeySystemUI(tbl4.Start, Library)
-			end
-
-			while tbl4.Whitelisted == false and wait() do
-			end
-
-			tbl4.DeleteKeyUi()
-			print("[Authenticate]", "Whitelisted!")
-		end,
-	}
-
-	-- Key bypass
-	tbl4.Start = function(arg, arg2)
-		Library:Notify({ Title = "Authenticate System", Content = "Authentication Successful!", Duration = 8 })
-		tbl4.IsPremiumUser = true
-		tbl4.Whitelisted = true
-	end
-
-	return tbl4.StartKeySystem
-end
-
-tbl3.SetStatus = function(arg)
-	pcall(function()
-		tbl3.Features.Status["Script Status"]:SetDesc(arg)
 	end)
 end
 
-tbl3.InitModules = function()
-	local module = tbl3.Module
+alive = function(arg)
+	arg = arg and arg.Character
+	local humanoid = arg and arg:FindFirstChildOfClass("Humanoid")
+	local humanoidRootPart = arg and arg:FindFirstChild("HumanoidRootPart")
+	if not humanoid or not humanoidRootPart or humanoid.Health <= 0 then
+		return
+	end
+	return arg, humanoid, humanoidRootPart
+end
 
-	for k, v2 in pairs(module) do
-		if typeof(v2) == "function" then
-			local ok, result = pcall(v2)
+friendly = function(arg)
+	if tbl4.teamCheck and localPlayer.Team and arg.Team == localPlayer.Team and localPlayer.Team.Name == "Marines" then
+		return true
+	end
+	return tbl4.skipFriends and tbl3[arg.UserId] == true
+end
 
-			if ok and result then
-				module[k] = result
-			elseif not ok and result then
-				warn("Loader", "Module", "Failed to load", k, result)
+foe = function(arg)
+	if arg == localPlayer or friendly(arg) then
+		return
+	end
+	return alive(arg)
+end
+
+befriend = function(arg)
+	if arg == localPlayer then
+		return
+	end
+
+	task.spawn(function()
+		local ok, result = pcall(localPlayer.IsFriendsWith, localPlayer, arg.UserId)
+		tbl3[arg.UserId] = ok and result or nil
+	end)
+end
+
+keyName = function(arg)
+	return typeof(arg) == "EnumItem" and arg.Name or tostring(arg)
+end
+
+keyDown = function(arg)
+	local ok, result = pcall(function()
+		return Enum.KeyCode[arg]
+	end)
+
+	return ok and UserInputService:IsKeyDown(result)
+end
+
+local raycastParams = RaycastParams.new()
+raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+
+seen = function(arg, arg2)
+	raycastParams.FilterDescendantsInstances = { localPlayer.Character, arg }
+	local position3 = currentCamera.CFrame.Position
+	return v:Raycast(position3, arg2.Position - position3, raycastParams) == nil
+end
+
+pick = function()
+	local v5, v6, v7 = alive(localPlayer)
+	if not v7 then
+		return
+	end
+
+	if v4 then
+		local v8, v9, v10 = foe(v4)
+		if v8 then
+			return v4, v8:FindFirstChild(tbl4.part) or v10
+		end
+		v4 = nil
+	end
+
+	local mouseLocation = UserInputService:GetMouseLocation()
+	local v8 = nil
+	local v9 = nil
+	local v10 = nil
+	local v11 = nil
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		local v12, v13, v14 = foe(player)
+
+		if v12 then
+			local v15 = v12:FindFirstChild(tbl4.part) or v14
+			local magnitude = (v14.Position - v7.Position).Magnitude
+			local v16, magnitude2 = currentCamera:WorldToViewportPoint(v15.Position)
+			magnitude2 = magnitude2 and (Vector2.new(v16.X, v16.Y) - mouseLocation).Magnitude or math.huge
+			local flag5 = magnitude <= tbl4.maxDist and (not tbl4.useFov or magnitude2 <= tbl4.fov or tbl4.fly and player == v2)
+			local health
+
+			if tbl4.pickMode == "Smart" then
+				health = smart(magnitude, v13, magnitude2)
+			else
+				health = tbl4.pickMode == "Nearest cursor" and magnitude2 or tbl4.pickMode == "Lowest health" and v13.Health or magnitude
+				flag5 = flag5 and health < math.huge
 			end
-		end
-	end
-end
 
-tbl3.InitSettings = function()
-	local settings
-
-	settings = {
-		SaveSettings = function()
-			writefile(players.Name .. "_FindFruitConfig.json", httpService:JSONEncode(tbl))
-		end,
-		LoadSettings = function()
-			local ok, result = pcall(function()
-				return httpService:JSONDecode(readfile(players.Name .. "_FindFruitConfig.json"))
-			end)
-
-			if not ok then
-				settings.SaveSettings()
-				return settings.LoadSettings()
-			end
-			return result
-		end,
-	}
-
-	local v2 = tbl
-	tbl = settings.LoadSettings()
-	local flag = false
-
-	for k, v3 in pairs(v2) do
-		if tbl[k] == nil then
-			tbl[k] = v3
-			flag = true
-		end
-	end
-
-	if flag then
-		settings.SaveSettings()
-	end
-
-	setmetatable(tbl2, {
-		__index = tbl,
-		__newindex = function(arg, arg2, arg3)
-			rawset(tbl, arg2, arg3 or nil)
-			settings.SaveSettings()
-		end,
-	})
-
-	tbl3.Module.Settings = settings
-end
-
-tbl3.CreateWindow = function()
-	tbl3.Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-
-	tbl3.Window = tbl3.Library:CreateWindow({
-		Title = "Night Hub Kaitun Find Fruit",
-		SubTitle = "Devs by @luongminhnghia_",
-		TabWidth = 145,
-		MinimizeKey = Enum.KeyCode.RightControl,
-		Size = UDim2.fromOffset(450, 350),
-		Acrylic = false,
-		Theme = tbl2["Select Themes"],
-		Image = "rbxassetid://118583787829543",
-	})
-end
-
-tbl3.CreateTabs = function()
-	tbl3.Tabs = {}
-	tbl3.Features = {}
-
-	local function fn(arg, arg2)
-		tbl3.Features[arg] = {}
-		tbl3.Tabs[arg] = tbl3.Window:AddTab({ Title = arg, Icon = arg2 })
-	end
-
-	fn("Status", "home")
-	fn("Configuration", "settings")
-	tbl3.Window:SelectTab(1)
-end
-
-tbl3.LoadLibrary = function()
-	tbl3.CreateWindow()
-	tbl3.CreateTabs()
-
-	local function fn(arg, arg2)
-		if not arg2.Title then
-			warn("Paragraph Missing Title!")
-			return
-		end
-		tbl3.Features[arg][arg2.Title] = tbl3.Tabs[arg]:AddParagraph(arg2)
-	end
-
-	local function fn2(arg, arg2)
-		if not arg2.Title or not arg2.Values then
-			warn("Dropdown Missing Title or Values!")
-			return
-		end
-		arg2.Default = arg2.Default or tbl2[arg2.Title] or arg2.Multi and {} or ""
-
-		arg2.Callback = arg2.Callback or function(arg3)
-			tbl2[arg2.Title] = arg3
-		end
-
-		return tbl3.Tabs[arg]:AddDropdown("Dropdown", arg2)
-	end
-
-	local function fn3(arg, arg2)
-		if not arg2.Title then
-			warn("Toggle Missing Title!")
-			return
-		end
-		arg2.Default = arg2.Default or tbl2[arg2.Title] or false
-
-		arg2.Callback = arg2.Callback or function(arg3)
-			tbl2[arg2.Title] = arg3
-		end
-
-		return tbl3.Tabs[arg]:AddToggle("Toggle", arg2)
-	end
-
-	local function fn4(arg, arg2)
-		if not arg2.Title then
-			warn("Textbox Missing Title!")
-			return
-		end
-		arg2.Default = arg2.Default or tbl2[arg2.Title] or false
-		arg2.PlaceHolder = arg2.PlaceHolder or ""
-		arg2.Numberic = arg2.Numberic or false
-
-		arg2.Callback = arg2.Callback or function(arg3)
-			tbl2[arg2.Title] = arg3
-		end
-
-		return tbl3.Tabs[arg]:AddInput("Textbox", arg2)
-	end
-
-	fn("Status", { Title = "Fruits In Server", Content = "Finding..." })
-	fn("Status", { Title = "Time Elapsed", Content = "0 Hours 0 Minutes 0 Seconds" })
-	fn("Status", { Title = "Script Status", Content = "None" })
-
-	fn2("Configuration", {
-		Title = "Select Themes",
-		Values = { "Dark", "Darker", "Light", "Aqua", "Amethyst", "Rose" },
-		Callback = function(arg)
-			tbl3.Library:SetTheme(arg)
-			tbl2["Select Themes"] = arg
-		end,
-	})
-
-	fn2("Configuration", { Title = "Tween Speed", Values = { "180", "250", "300", "325", "350" }, Desc = "High=Risk" })
-	fn3("Configuration", { Title = "Fix lag when executing script" })
-	fn3("Configuration", { Title = "Bypass Teleport", Desc = "Respawn at nearest spawn instead of long tween" })
-	fn4("Configuration", { Title = "Hop Delay", PlaceHolder = "Enter Number", Numberic = true })
-	fn3("Configuration", { Title = "Start", Desc = "Start kaitun find Fruit" })
-	fn3("Configuration", { Title = "Store Fruit" })
-end
-
-tbl3.MakeFunctions = function()
-	tbl3.Functions = {}
-	tbl3.Thread = {}
-
-	local function fn(arg, arg2)
-		if tbl2[arg] and not tbl3.Thread[arg] then
-			tbl3.Thread[arg] = true
-
-			spawn(function()
-				while tbl2[arg] and wait() do
-					local ok, result = pcall(arg2)
-
-					if not ok then
-						warn(arg, result)
-					end
+			if flag5 and (not tbl4.wallCheck or seen(v12, v15)) then
+				if player == v2 then
+					v8 = health
 				end
 
-				tbl3.Thread[arg] = nil
-			end)
+				if not v9 or health < v9 then
+					v9 = health
+					v10 = player
+					v11 = v15
+				end
+			end
 		end
 	end
 
-	local tweenModules = tbl3.Module.TweenModules
-	local playerMD = tbl3.Module.PlayerMD
-	local encrypt = tbl3.Module.Encrypt
-	local bypassTP = tbl3.Module.BypassTP
-	local n = 25
+	if tbl4.pickMode == "Smart" and v8 and v10 ~= v2 and v9 > v8 - 0.08 then
+		local v12, v13, v14 = alive(v2)
+		return v2, v12:FindFirstChild(tbl4.part) or v14
+	end
+	return v10, v11
+end
 
-	local function fn2(cFrame)
-		if bypassTP.Runtime.Bypassing then
-			return false
-		end
-		local v2 = playerMD.GetHRP()
-		if not v2 then
-			return false
-		end
-		local position = cFrame.Position
-		local magnitude = (position - v2.Position).Magnitude
+smart = function(arg, arg2, arg3)
+	local n2 = tbl4.smartHp / 100 * 0.85
+	local n3 = 0.85 - n2
+	local n4 = arg2.MaxHealth > 0 and arg2.Health / arg2.MaxHealth or 1
+	local n5 = arg3 == math.huge and 1
 
-		if magnitude <= n then
-			bypassTP.ResetCount()
-			v2.CFrame = cFrame
-			return true
-		end
+	if not n5 then
+		n5 = math.clamp(arg3 / (tbl4.useFov and tbl4.fov or 800), 0, 1)
+	end
 
-		if magnitude >= bypassTP.Distance and bypassTP.CanBypass() and bypassTP.GetBypassCFrame(position) then
-			return bypassTP.Start(position)
-		end
-		tweenModules.TP(cFrame, true)
+	local n6 = n3 * math.clamp(arg / tbl4.maxDist, 0, 1) + n2 * n4 + 0.15 * n5
+
+	if n4 <= 0.25 then
+		n6 -= 0.2
+	end
+
+	return n6
+end
+
+triggered = function()
+	if tbl4.aimTrigger == "Always" then
 		return true
 	end
 
-	local function fn3()
-		local tbl4 = {}
-		local v2 = next
-		local children, v3 = workspace:GetChildren()
+	if tbl4.aimTrigger == "Hold key" then
+		return keyDown(tbl4.aimKey)
+	end
+	return UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+end
 
-		for _, v4 in v2, children, v3 do
-			if (v4:IsA("Model") or v4:IsA("Tool")) and string.find(v4.Name, "Fruit") and v4.Parent and v4:FindFirstChild("Handle") then
-				table.insert(tbl4, v4)
+dot = function(arg, arg2)
+	return arg.X * arg2.X + arg.Y * arg2.Y + arg.Z * arg2.Z
+end
+
+bend = function(arg)
+	local kind = typeof(arg)
+
+	if kind == "Vector3" then
+		if (arg - position2).Magnitude <= 12 then
+			return n
+		end
+
+		if math.abs(arg.Magnitude - 1) < 0.01 and dot(arg, unit2) > 0.98 then
+			return unit
+		end
+	elseif kind == "CFrame" then
+		local position3 = arg.Position
+		if (position3 - position2).Magnitude <= 12 then
+			return CFrame.new(n)
+		end
+
+		if (position3 - position).Magnitude < 15 and dot(arg.LookVector, unit2) > 0.98 then
+			return CFrame.lookAt(position3, n)
+		end
+	end
+
+	return arg
+end
+
+hook = function()
+	if flag3 then
+		return true
+	end
+
+	if type(hookmetamethod) ~= "function" or type(getnamecallmethod) ~= "function" then
+		return false, "No hookmetamethod"
+	end
+
+	local fn = type(newcclosure) == "function" and newcclosure or function(arg)
+		return arg
+	end
+
+	local v5 = nil
+	local v6 = nil
+
+	local function fn2(d, ...)
+		if flag2 and not checkcaller() then
+		  local j = getnamecallmethod();
+
+		  if(j == "FireServer" or j == "InvokeServer") and math.random(100) <= tbl4.chance then
+		    local u = table.pack(...);
+
+		    for Z = 1, u.n, 1 do
+		      u[Z] = bend(u[Z]);
+		    end;
+
+		    if setnamecallmethod then
+		      setnamecallmethod(j);
+		    end;
+
+		    return v5(d, table.unpack(u, 1, u.n));
+		  end;
+		end;
+
+		return v5(d, ...);
+	end
+
+	v5 = hookmetamethod(game, "__namecall", fn(fn2))
+
+	v6 = hookmetamethod(game, "__index", fn(function(d, j)
+		if flag2 and rawequal(d, mouse) and not checkcaller() then
+		  if j == "Hit" then
+		    return CFrame.new(n);
+		  end;
+
+		  if j == "Target" then
+		    return v3;
+		  end;
+		end;
+
+		if Move.on and(rawequal(d, Move.hum)) and not checkcaller() then
+		  local u = Move.real[j];
+		  if u ~= nil then
+		    return u;
+		  end;
+		end;
+
+		return v6(d, j);
+	end))
+
+	local v7 = nil
+
+	local function fn3(d, j, u)
+		if Move.watch and not checkcaller() then
+		  if rawequal(d, Move.hum) then
+		    local Z = Move.forced[j];
+		    if Z ~= nil then
+		      Move.real[j] = u;
+		      return v7(d, j, Z);
+		    end;
+
+		    if tbl4.noStun and(stunWrite(j, u)) then
+		      return;
+		    end;
+		  elseif tbl4.noStun and(rawequal(d, Move.root)) and j == "Anchored" and u == true then
+		    return;
+		  end;
+		end;
+
+		return v7(d, j, u);
+	end
+
+	v7 = hookmetamethod(game, "__newindex", fn(fn3))
+	flag3 = true
+	return true
+end
+
+jumpHeight = function(arg)
+	return arg * arg / 2 * v.Gravity
+end
+
+local tbl7 = {
+	Enum.HumanoidStateType.Ragdoll,
+	Enum.HumanoidStateType.FallingDown,
+	Enum.HumanoidStateType.PlatformStanding,
+}
+
+stunWrite = function(arg, arg2)
+	if arg == "WalkSpeed" or arg == "JumpPower" or arg == "JumpHeight" then
+		return type(arg2) == "number" and arg2 <= 1
+	end
+
+	if arg == "PlatformStand" then
+		return arg2 == true
+	end
+
+	if arg == "AutoRotate" then
+		return arg2 == false
+	end
+	return false
+end
+
+unstun = function(arg, stunHum, arg2)
+	local flag5 = tbl4.noStun and stunHum ~= nil
+
+	if flag5 and (not Move.stunOff or stunHum ~= Move.stunHum) then
+		Move.stunSaved = {}
+
+		for _, v5 in ipairs(tbl7) do
+			Move.stunSaved[v5] = stunHum:GetStateEnabled(v5)
+			stunHum:SetStateEnabled(v5, false)
+		end
+
+		local v5 = Move
+		Move.stunOff = true
+		v5.stunHum = stunHum
+	elseif not flag5 and Move.stunOff then
+		local stunHum2 = Move.stunHum
+
+		if stunHum2 and stunHum2.Parent then
+			local v5 = pairs
+			local stunSaved = Move.stunSaved or {}
+
+			for k, v6 in v5(stunSaved) do
+				stunHum2:SetStateEnabled(k, v6)
 			end
 		end
 
-		return tbl4
+		local v5 = Move
+		Move.stunOff = false
+		v5.stunHum = nil
 	end
 
-	local n2 = 500
-
-	local function fn4(arg)
-		if typeof(tbl2.Servers) ~= "table" then
-			tbl2.Servers = {}
-		end
-
-		local servers = tbl2.Servers
-		local flag = false
-
-		if not table.find(servers, arg) then
-			table.insert(servers, arg)
-			flag = true
-		end
-
-		while n2 < #servers do
-			table.remove(servers, 1)
-			flag = true
-		end
-
-		if flag then
-			tbl3.Module.Settings.SaveSettings()
-		end
-
-		return servers
+	if not flag5 then
+		return
 	end
 
-	local function fn5()
-		local v2 = fn4(game.JobId)
-		local tbl4 = {}
+	if stunHum.PlatformStand then
+		stunHum.PlatformStand = false
+	end
 
-		for _, v3 in ipairs(v2) do
-			tbl4[v3] = true
+	if not stunHum.AutoRotate then
+		stunHum.AutoRotate = true
+	end
+
+	if arg2.Anchored then
+		arg2.Anchored = false
+	end
+
+	local stun = arg:FindFirstChild("Stun")
+
+	if stun and stun:IsA("ValueBase") and type(stun.Value) == "number" and stun.Value ~= 0 then
+		stun.Value = 0
+	end
+
+	local busy = arg:FindFirstChild("Busy")
+
+	if busy and busy:IsA("BoolValue") and busy.Value then
+		busy.Value = false
+	end
+end
+
+movement = function()
+	local v5, v6, v7 = alive(localPlayer)
+	Move.root = v7
+	pcall(unstun, v5, v6, v7)
+	Move.watch = tbl4.noStun or Move.on
+
+	if v6 ~= Move.hum then
+		Move.hum = v6
+		local v8 = Move
+		Move.real = {}
+		v8.forced = {}
+	end
+
+	Move.real = Move.real or {}
+	Move.forced = Move.forced or {}
+	if not v6 then
+		Move.on = false
+		return
+	end
+	local forced = {}
+
+	if tbl4.speed then
+		forced.WalkSpeed = tbl4.speedValue
+	end
+
+	if tbl4.jumpOn then
+		forced.JumpPower = tbl4.jumpValue
+		forced.JumpHeight = jumpHeight(tbl4.jumpValue)
+	end
+
+	for k, v8 in pairs(Move.real) do
+		if forced[k] == nil then
+			v6[k] = v8
+			Move.real[k] = nil
+		end
+	end
+
+	for k, v8 in pairs(forced) do
+		if Move.real[k] == nil then
+			Move.real[k] = v6[k]
 		end
 
-		local ok, result = pcall(function()
-			return http.request({ Url = "http://163.223.9.144/boss/Fruits", Method = "GET" })
+		if v6[k] ~= v8 then
+			v6[k] = v8
+		end
+	end
+
+	Move.forced = forced
+	Move.on = next(forced) ~= nil
+	Move.watch = tbl4.noStun or Move.on
+end
+
+noclip = function()
+	local character = localPlayer.Character
+	if not character then
+		return
+	end
+	local noclip_ = tbl4.noclip or tbl4.fly and tbl4.flyNoclip and v2 ~= nil
+
+	for _, descendant in ipairs(character:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			if noclip_ then
+				if Move.clip[descendant] == nil then
+					Move.clip[descendant] = descendant.CanCollide
+				end
+
+				descendant.CanCollide = false
+			elseif Move.clip[descendant] ~= nil then
+				descendant.CanCollide = Move.clip[descendant]
+				Move.clip[descendant] = nil
+			end
+		end
+	end
+
+	if not noclip_ then
+		table.clear(Move.clip)
+	end
+end
+
+escape = function()
+	local v5, v6, v7 = alive(localPlayer)
+	if not tbl4.escape or not v6 then
+		return
+	end
+	local n2 = v6.MaxHealth > 0 and v6.Health / v6.MaxHealth * 100 or 100
+	if tbl4.escapeHp < n2 then
+		Move.fled = false
+		return
+	end
+
+	if Move.fled then
+		return
+	end
+	Move.fled = true
+	v7.CFrame = v7.CFrame + Vector3.new(0, tbl4.escapeUp, 0)
+	v7.AssemblyLinearVelocity = Vector3.zero
+
+	if UI.note then
+		local escapeUp = tbl4.escapeUp
+		UI.note(("HP %*%%, escaped %* studs up"):format(math.floor(n2), escapeUp), "warn")
+	end
+end
+
+findGun = function(arg)
+	local flag5 = tbl4.gunPick == "Any gun"
+
+	local function fn(arg2)
+		if not arg2:IsA("Tool") then
+			return false
+		end
+
+		if flag5 then
+			return arg2.ToolTip == "Gun"
+		end
+		return string.find(string.lower(string.gsub(arg2.Name, "%s", "")), "dragonstorm", 1, true) ~= nil
+	end
+
+	for _, child in ipairs(arg:GetChildren()) do
+		if fn(child) then
+			return child, true
+		end
+	end
+
+	for _, child in ipairs(localPlayer.Backpack:GetChildren()) do
+		if fn(child) then
+			return child, false
+		end
+	end
+end
+
+press = function(arg)
+	local ok, result = pcall(game.GetService, game, "VirtualInputManager")
+	if not ok or not result then
+		return
+	end
+
+	pcall(function()
+		result:SendKeyEvent(true, Enum.KeyCode[arg], false, game)
+		task.wait(0.06)
+		result:SendKeyEvent(false, Enum.KeyCode[arg], false, game)
+	end)
+end
+
+shoot = function()
+	local v5, v6, v7 = alive(localPlayer)
+	if not v5 then
+		return false, "No character"
+	end
+	local v8, v9, v10 = alive(v2)
+	if not v10 then
+		return false, "No target"
+	end
+
+	if tbl4.gunRange < (v10.Position - v7.Position).Magnitude then
+		return false, "Target out of range"
+	end
+	local v11, v12 = findGun(v5)
+	if not v11 then
+		return false, tbl4.gunPick == "Any gun" and "No gun in backpack" or "No Dragonstorm in backpack"
+	end
+	local v13, v14 = hook()
+	if not v13 then
+		return false, v14
+	end
+	local tool = v5:FindFirstChildOfClass("Tool")
+
+	if not v12 then
+		v6:EquipTool(v11)
+		task.wait(0.12)
+	end
+
+	Gun.aimUntil = os.clock() + (tbl4.gunSkills and 0.9 or 0.4)
+	v11:Activate()
+
+	if tbl4.gunSkills then
+		press("Z")
+		press("X")
+	end
+
+	local v15 = Gun
+	v15.shots = v15.shots + 1
+
+	if tbl4.gunBack and tool and tool ~= v11 then
+		task.delay(0.3, function()
+			if tool.Parent == localPlayer.Backpack and alive(localPlayer) then
+				v6:EquipTool(tool)
+			end
 		end)
+	end
 
-		if not ok or typeof(result) ~= "table" or not result.Body then
-			warn("HopFindFruit", ok, typeof(result) == "table" and result.StatusCode or result)
+	return true, (("Shots %*"):format(Gun.shots))
+end
+
+net = function()
+	local modules = ReplicatedStorage:FindFirstChild("Modules")
+	modules = modules and modules:FindFirstChild("Net")
+	return modules and modules:FindFirstChild("RE/RegisterAttack"), modules and modules:FindFirstChild("RE/RegisterHit")
+end
+
+remote = function(arg)
+	local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+	return remotes and remotes:FindFirstChild(arg)
+end
+
+local tbl8 = { Melee = true, Sword = true }
+
+arm = function(arg, arg2)
+	local tool = arg:FindFirstChildOfClass("Tool")
+
+	if tbl4.auraWeapon == "Keep current" then
+		if tool and tbl8[tool.ToolTip] then
+			return tool
+		end
+		return nil, "Hold a melee or sword"
+	end
+
+	if tool and tool.ToolTip == tbl4.auraWeapon then
+		return tool
+	end
+
+	for _, child in ipairs(localPlayer.Backpack:GetChildren()) do
+		if child:IsA("Tool") and child.ToolTip == tbl4.auraWeapon then
+			arg2:EquipTool(child)
+			return child
+		end
+	end
+
+	return nil, (("No %* in backpack"):format(tbl4.auraWeapon))
+end
+
+swing = function()
+	local v5, v6, v7 = alive(localPlayer)
+	if not v5 then
+		return false, "No character"
+	end
+	local v8, v9 = net()
+	if not v8 or not v9 then
+		return false, "No combat api"
+	end
+	local tbl9 = {}
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		local v10, v11, v12 = foe(player)
+
+		if v10 and (tbl4.auraAll or player == v2) and (v12.Position - v7.Position).Magnitude <= tbl4.auraRange then
+			local n2 = #tbl9 + 1
+			local tbl10 = {}
+			local head = v10:FindFirstChild("Head") or v12
+			tbl10[1] = v10
+			tbl10[2] = head
+			tbl9[n2] = tbl10
+		end
+	end
+
+	if #tbl9 == 0 then
+		return false, "No one in range"
+	end
+	local v10, v11 = arm(v5, v6)
+	if v11 then
+		return false, v11
+	end
+	v8:FireServer(0)
+	v9:FireServer(tbl9[1][2], tbl9)
+	local v12 = Aura
+	v12.swings = v12.swings + 1
+	return true, (("Hit %*"):format(#tbl9))
+end
+
+buso = function()
+	local v5 = alive(localPlayer)
+	if not v5 or v5:FindFirstChild("HasBuso") then
+		return
+	end
+	local CommF_ = remote("CommF_")
+	if not CommF_ then
+		return false, "No CommF_"
+	end
+	CommF_:InvokeServer("Buso")
+end
+
+ken = function()
+	if not alive(localPlayer) then
+		return
+	end
+	local CommE = remote("CommE")
+	if not CommE then
+		return false, "No CommE"
+	end
+	CommE:FireServer("Ken", true)
+end
+
+race = function()
+	if not alive(localPlayer) then
+		return false, "No character"
+	end
+	local CommE = remote("CommE")
+	if not CommE then
+		return false, "No CommE"
+	end
+	CommE:FireServer("ActivateAbility")
+	return true
+end
+
+local tbl9 = {
+	BodyVelocity = true,
+	BodyPosition = true,
+	BodyGyro = true,
+	BodyForce = true,
+	BodyAngularVelocity = true,
+	BodyThrust = true,
+	RocketPropulsion = true,
+	LinearVelocity = true,
+	AlignPosition = true,
+	AlignOrientation = true,
+	VectorForce = true,
+	AngularVelocity = true,
+}
+
+stunMover = function(arg, arg2)
+	if not tbl9[arg.ClassName] or arg:GetAttribute("NightPvp") then
+		return false
+	end
+
+	if tbl4.moverFilter == "Remove all" or not arg2 then
+		return true
+	end
+	local lookVector = arg2.CFrame.LookVector
+	local velocity = arg:IsA("BodyVelocity") and arg.Velocity or arg:IsA("LinearVelocity") and arg.VectorVelocity or nil
+
+	if velocity then
+		if velocity.Magnitude < 1 then
+			return true
+		end
+		return velocity.Unit:Dot(lookVector) < 0.3
+	end
+
+	local position3 = arg:IsA("BodyPosition") and arg.Position or arg:IsA("AlignPosition") and arg.Position or nil
+	if position3 then
+		local n2 = position3 - arg2.Position
+		return n2.Magnitude < 4 or n2.Unit:Dot(lookVector) < 0.3
+	end
+	return true
+end
+
+watchMovers = function(arg)
+	if Move.moverBond then
+		Move.moverBond:Disconnect()
+	end
+
+	if not arg then
+		return
+	end
+
+	Move.moverBond = bind(arg.DescendantAdded:Connect(function(descendant)
+		if not tbl4.noStun or not tbl9[descendant.ClassName] then
 			return
 		end
 
-		local ok2, result2 = pcall(function()
-			return httpService:JSONDecode(result.Body)
+		task.defer(function()
+			if descendant.Parent and stunMover(descendant, arg:FindFirstChild("HumanoidRootPart")) then
+				descendant:Destroy()
+			end
 		end)
+	end))
+end
 
-		if not ok2 or typeof(result2) ~= "table" or typeof(result2.data) ~= "table" then
-			warn("HopFindFruit", "Invalid response", result2)
-			return
+sweepMovers = function()
+	if not tbl4.noStun then
+		return
+	end
+	local character = localPlayer.Character
+	local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+	if not humanoidRootPart then
+		return
+	end
+
+	for _, descendant in ipairs(character:GetDescendants()) do
+		if tbl9[descendant.ClassName] and stunMover(descendant, humanoidRootPart) then
+			descendant:Destroy()
 		end
-		local tbl5 = {}
-		local tbl6 = {}
+	end
+end
 
-		for _, v3 in pairs(result2.data) do
-			if typeof(v3) == "table" and v3.JobId and v3.Age and v3.PlaceId == game.PlaceId then
-				local v4 = encrypt.decodeJobId(v3.JobId)
+flyGoal = function(arg, arg2)
+	local vector = Vector3.new(0, tbl4.flyUp, 0)
 
-				if v4 and v4 ~= game.JobId and not tbl5[v4] and not tbl4[v4] and not table.find(v.KaitunFruit.BlacklistFruits, v3.Name) then
-					tbl5[v4] = true
-					table.insert(tbl6, { JobId = v4, Name = v3.Name, Age = v3.Age })
+	if tbl4.flyMode == "Smart" then
+		local v5, v6 = alive(localPlayer)
+		local v7, v8 = alive(v2)
+		local n2 = v6 and v6.MaxHealth > 0 and v6.Health / v6.MaxHealth or 1
+		local n3 = v8 and v8.MaxHealth > 0 and v8.Health / v8.MaxHealth or 1
+		local v9 = Fly
+		local flag5 = n2 * 100 >= tbl4.retreatHp
+
+		if flag5 then
+			flag5 = (Fly.crowd or 0) <= 1
+		end
+
+		v9.push = flag5 and (n2 - n3) * 100 >= -tbl4.engageEdge
+		local v10 = Fly
+		v10.angle = v10.angle + arg2
+		local n4 = -arg.CFrame.LookVector
+		local vector2 = Vector3.new(n4.X, 0, n4.Z)
+		local unit3 = vector2.Magnitude > 0.1 and vector2.Unit or Vector3.new(0, 0, 1)
+		local vector3 = Vector3.new(-unit3.Z, 0, unit3.X)
+		if Fly.push then
+			return arg.Position + unit3 * tbl4.engageDist + Vector3.new(0, 2, 0)
+		end
+		local kiteSway = tbl4.kiteSway
+		return arg.Position + unit3 * tbl4.kiteDist + vector3 * math.sin(Fly.angle * 2) * kiteSway + vector
+	end
+
+	if tbl4.flyMode == "Kite" then
+		local v5 = Fly
+		v5.angle = v5.angle + arg2
+		local n2 = -arg.CFrame.LookVector
+		local vector2 = Vector3.new(n2.X, 0, n2.Z)
+		local unit3 = vector2.Magnitude > 0.1 and vector2.Unit or Vector3.new(0, 0, 1)
+		local kiteSway = tbl4.kiteSway
+		return arg.Position + unit3 * tbl4.kiteDist + Vector3.new(-unit3.Z, 0, unit3.X) * math.sin(Fly.angle * 2) * kiteSway + vector
+	end
+
+	if tbl4.flyMode == "Orbit" then
+		local v5 = Fly
+		v5.angle = v5.angle + tbl4.orbitSpeed * arg2
+		local sin = math.sin
+		local angle = Fly.angle
+		local orbitRadius = tbl4.orbitRadius
+		return arg.Position + Vector3.new(math.cos(Fly.angle), 0, sin(angle)) * orbitRadius + vector
+	end
+
+	local assemblyLinearVelocity = arg.AssemblyLinearVelocity
+	local vector2 = Vector3.new(assemblyLinearVelocity.X, 0, assemblyLinearVelocity.Z)
+	if vector2.Magnitude > 2 then
+		return arg.Position + vector2.Unit * tbl4.flyDist + vector
+	end
+	return arg.Position - arg.CFrame.LookVector * tbl4.flyDist + vector
+end
+
+fly = function(arg)
+	if not tbl4.fly then
+		local v5 = Fly
+		Fly.expect = nil
+		v5.note = "Off"
+		return
+	end
+
+	local v5, v6, note = alive(localPlayer)
+	local v7, v8, v9 = alive(v2)
+
+	if not note or not v9 then
+		Fly.expect = nil
+		local v10 = Fly
+		note = note and "No target" or "No character"
+		v10.note = note
+		return
+	end
+
+	if Fly.expect and (note.Position - Fly.expect).Magnitude > math.max(8, Fly.step * 3) then
+		Fly.slowUntil = os.clock() + 6
+		local v10 = Fly
+		v10.rubber = v10.rubber + 1
+	end
+
+	local slowUntil = Fly.slowUntil
+	local flySafe = os.clock() < slowUntil and tbl4.flySafe or tbl4.flySpeed
+	local position3 = note.Position
+	local n2 = flyGoal(v9, arg) - position3
+	local step = math.min(n2.Magnitude, flySafe * arg)
+	local position4 = n2.Magnitude > 0.05 and note.Position + n2.Unit * step or note.Position
+	note.CFrame = CFrame.lookAt(position4, Vector3.new(v9.Position.X, position4.Y, v9.Position.Z))
+	note.AssemblyLinearVelocity = Vector3.zero
+	note.AssemblyAngularVelocity = Vector3.zero
+	local v10 = Fly
+	Fly.expect = position4
+	v10.step = step
+	local str = tbl4.flyMode == "Smart" and (Fly.push and "ATTACK  |  " or "KITE  |  ") or ""
+	local rubber = Fly.rubber
+	Fly.note = ("%*%* studs/s  |  %* away  |  pulled back %*x"):format(str, flySafe, math.floor(n2.Magnitude), rubber)
+end
+
+antiAimBeat = function()
+	if not tbl4.antiAim then
+		return
+	end
+	local v5, v6, v7 = alive(localPlayer)
+	if not v7 then
+		return
+	end
+	Fly.realVel = v7.AssemblyLinearVelocity
+	local antiAimPower = tbl4.antiAimPower
+	local random = math.random
+	v7.AssemblyLinearVelocity = Vector3.new(math.random(-antiAimPower, antiAimPower), math.random(-antiAimPower, antiAimPower) * 0.3, random(-antiAimPower, antiAimPower))
+end
+
+antiAimStep = function()
+	if not Fly.realVel then
+		return
+	end
+	local v5, v6, v7 = alive(localPlayer)
+
+	if v7 then
+		v7.AssemblyLinearVelocity = Fly.realVel
+	end
+
+	Fly.realVel = nil
+end
+
+dodge = function()
+	local flag5 = not tbl4.dodge
+
+	if not flag5 then
+		flag5 = os.clock() < (Move.dodgeAt or 0)
+	end
+
+	if flag5 then
+		return
+	end
+	local v5, v6, v7 = alive(localPlayer)
+	if not v7 then
+		return
+	end
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		local v8, v9, v10 = foe(player)
+
+		if v8 then
+			local n2 = v7.Position - v10.Position
+			local magnitude = n2.Magnitude
+
+			if magnitude > 0.1 and magnitude < tbl4.dodgeRange and v10.CFrame.LookVector:Dot(n2.Unit) > 0.85 then
+				local vector = Vector3.new(n2.X, 0, n2.Z)
+				local unit3 = vector.Magnitude > 0.1 and Vector3.new(-vector.Z, 0, vector.X).Unit or Vector3.new(1, 0, 0)
+
+				if math.random() < 0.5 then
+					unit3 = -unit3
+				end
+
+				v7.CFrame = v7.CFrame + unit3 * tbl4.dodgeDist
+				Fly.expect = nil
+				local dodgeCd = tbl4.dodgeCd
+				Move.dodgeAt = os.clock() + dodgeCd
+				return
+			end
+		end
+	end
+end
+
+crowd = function()
+	local v5, v6, v7 = alive(localPlayer)
+	if not v7 then
+		Fly.crowd = 0
+		return
+	end
+	local crowd_ = 0
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		local v8, v9, v10 = foe(player)
+
+		if v8 and (v10.Position - v7.Position).Magnitude <= tbl4.gankRange then
+			crowd_ += 1
+		end
+	end
+
+	local flag5 = crowd_ >= 2
+
+	if flag5 then
+		flag5 = (Fly.crowd or 0) < 2
+	end
+
+	if flag5 and UI.note then
+		UI.note(("%* enemies around you, backing off"):format(crowd_), "warn")
+	end
+
+	Fly.crowd = crowd_
+end
+
+hold = function(arg, arg2)
+	local ok, result = pcall(game.GetService, game, "VirtualInputManager")
+	if not ok or not result then
+		return
+	end
+
+	pcall(function()
+		result:SendKeyEvent(true, Enum.KeyCode[arg], false, game)
+		task.wait(math.max(arg2, 0.03))
+		result:SendKeyEvent(false, Enum.KeyCode[arg], false, game)
+	end)
+end
+
+skills = function()
+	local v5, v6, v7 = alive(localPlayer)
+	if not v5 then
+		return false, "No character"
+	end
+	local v8, v9, v10 = alive(v2)
+	if not v10 then
+		return false, "No target"
+	end
+
+	if tbl4.skillRange < (v10.Position - v7.Position).Magnitude then
+		return false, "Target out of range"
+	end
+	local v11, v12 = hook()
+	if not v11 then
+		return false, v12
+	end
+
+	for _, v13 in ipairs({ "Z", "X", "C", "V", "F" }) do
+		if not (not tbl4.autoSkill or not alive(v2)) then
+			if tbl4.skillKeys[v13] then
+				local skillHold = tbl4.skillHold
+				Gun.aimUntil = os.clock() + skillHold + 0.5
+				hold(v13, tbl4.skillHold)
+				task.wait(tbl4.skillGap)
+			end
+
+			continue
+		end
+
+		break
+	end
+end
+
+hitboxes = function()
+	for _, player in ipairs(Players:GetPlayers()) do
+		local humanoidRootPart = player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
+		if humanoidRootPart then
+			local v5 = Hit.orig[humanoidRootPart]
+
+			if tbl4.hitbox and foe(player) then
+				if not v5 then
+					Hit.orig[humanoidRootPart] = { humanoidRootPart.Size, humanoidRootPart.Transparency, humanoidRootPart.CanCollide }
+				end
+
+				local size = Vector3.one * tbl4.hitboxSize
+
+				if humanoidRootPart.Size ~= size then
+					humanoidRootPart.Size = size
+				end
+
+				humanoidRootPart.Transparency = tbl4.hitboxShow and 0.8 or 1
+				humanoidRootPart.CanCollide = false
+			elseif v5 then
+				local v6 = v5[1]
+				local v7 = v5[2]
+				local v8 = v5[3]
+				humanoidRootPart.Size = v6
+				humanoidRootPart.Transparency = v7
+				humanoidRootPart.CanCollide = v8
+				Hit.orig[humanoidRootPart] = nil
+			end
+		end
+	end
+
+	for k in pairs(Hit.orig) do
+		if not k.Parent then
+			Hit.orig[k] = nil
+		end
+	end
+end
+
+stick = function()
+	if not tbl4.stick or not v2 or tbl4.fly then
+		return
+	end
+	local v5, v6, v7 = alive(localPlayer)
+	local v8, v9, v10 = alive(v2)
+	if not v7 or not v10 or (v10.Position - v7.Position).Magnitude > tbl4.stickRange then
+		return
+	end
+	local n2 = v10.Position - v10.CFrame.LookVector * tbl4.stickBack + Vector3.new(0, tbl4.stickUp, 0)
+	v7.CFrame = CFrame.lookAt(n2, Vector3.new(v10.Position.X, n2.Y, v10.Position.Z))
+	v7.AssemblyLinearVelocity = Vector3.zero
+end
+
+antiAfk = function()
+	if type(getconnections) ~= "function" then
+		return false, "No getconnections"
+	end
+
+	for _, v5 in ipairs(getconnections(localPlayer.Idled)) do
+		pcall(function()
+			if tbl4.antiAfk then
+				v5:Disable()
+			else
+				v5:Enable()
+			end
+		end)
+	end
+
+	return true
+end
+
+local flag5 = type(Drawing) == "table" and type(Drawing.new) == "function"
+
+draw = function(arg, arg2)
+	local v5 = Drawing.new(arg)
+
+	for k, v6 in pairs(arg2) do
+		v5[k] = v6
+	end
+
+	return v5
+end
+
+kit = function(arg)
+	local v5 = Esp.pool[arg]
+	if v5 then
+		return v5
+	end
+
+	local tbl10 = {
+		edge = draw("Square", { Thickness = 3, Filled = false, Color = Color3.new(), Visible = false }),
+		box = draw("Square", { Thickness = 1, Filled = false, Visible = false }),
+		name = draw("Text", { Size = 14, Center = true, Outline = true, Visible = false }),
+		info = draw("Text", {
+			Size = 13,
+			Center = true,
+			Outline = true,
+			Color = Color3.fromRGB(210, 210, 210),
+			Visible = false,
+		}),
+		back = draw("Square", { Filled = true, Color = Color3.new(), Visible = false }),
+		fill = draw("Square", { Filled = true, Visible = false }),
+		hp = draw("Text", { Size = 12, Outline = true, Visible = false }),
+		line = draw("Line", { Thickness = 1, Visible = false }),
+	}
+
+	Esp.pool[arg] = tbl10
+	return tbl10
+end
+
+blank = function(arg)
+	for k, v5 in pairs(arg) do
+		if k ~= "cham" then
+			v5.Visible = false
+		end
+	end
+end
+
+hide = function(arg)
+	blank(arg)
+
+	if arg.cham then
+		arg.cham.Enabled = false
+	end
+end
+
+drop = function(arg)
+	local v5 = Esp.pool[arg]
+	if not v5 then
+		return
+	end
+
+	for _, v6 in pairs(v5) do
+		pcall(function()
+			v6:Destroy()
+		end)
+	end
+
+	Esp.pool[arg] = nil
+end
+
+tintOf = function(arg)
+	if arg == v2 and tbl4.tgtMark then
+		return tbl5[tbl4.tgtColor]
+	end
+
+	if tbl4.teamColor and arg.Team then
+		return arg.TeamColor.Color
+	end
+	return tbl5[tbl4.espColor]
+end
+
+lore = function(arg, arg2)
+	local data = arg:FindFirstChild("Data")
+	local level = data and data:FindFirstChild("Level")
+	data = data and data:FindFirstChild("DevilFruit")
+	local tbl10 = { (("%*m"):format(math.floor(arg2))) }
+
+	if level then
+		local insert = table.insert
+		local str = ("Lv %*"):format(level.Value)
+		insert(tbl10, 1, str)
+	end
+
+	if data and data.Value ~= "" then
+		tbl10[#tbl10 + 1] = data.Value
+	end
+
+	return table.concat(tbl10, " | ")
+end
+
+cham = function(arg, parent, fillColor)
+	if not tbl4.chams then
+		if arg.cham then
+			arg.cham.Enabled = false
+		end
+
+		return
+	end
+
+	if not arg.cham or arg.cham.Parent ~= parent then
+		if arg.cham then
+			arg.cham:Destroy()
+		end
+
+		local highlight = Instance.new("Highlight")
+		highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+		highlight.FillTransparency = 0.6
+		highlight.Parent = parent
+		arg.cham = highlight
+	end
+
+	arg.cham.Enabled = true
+	local cham_ = arg.cham
+	arg.cham.FillColor = fillColor
+	cham_.OutlineColor = fillColor
+end
+
+paint = function(arg, arg2, arg3, arg4)
+	local v5 = Esp.pool[arg]
+
+	if not tbl4.esp then
+		if v5 then
+			hide(v5)
+		end
+
+		return
+	end
+
+	local v6 = kit(arg)
+	local v7, v8, v9 = alive(arg)
+	local magnitude = v7 and (v9.Position - arg2).Magnitude or math.huge
+	if tbl4.espDist < magnitude then
+		return hide(v6)
+	end
+	local v10 = tintOf(arg)
+	cham(v6, v7, v10)
+	local v11, v12 = currentCamera:WorldToViewportPoint(v9.Position + Vector3.new(0, 3, 0))
+	local v13, v14 = currentCamera:WorldToViewportPoint(v9.Position - Vector3.new(0, 3.5, 0))
+	local flag6 = v11.Z <= 0
+
+	if not flag6 then
+		flag6 = not (v12 or v14)
+	end
+
+	if flag6 then
+		return blank(v6)
+	end
+	local n2 = math.max(v13.Y - v11.Y, 6)
+	local n3 = n2 * 0.6
+	local n4 = v11.X - n3 / 2
+	local y = v11.Y
+	local edge = v6.edge
+	local box = tbl4.box
+	v6.box.Visible = tbl4.box
+	edge.Visible = box
+	local box2 = v6.box
+	local box3 = v6.box
+	local box4 = v6.box
+	local vector2 = Vector2.new(n3, n2)
+	local vector22 = Vector2.new(n4, y)
+	box2.Size = vector2
+	box3.Position = vector22
+	box4.Color = v10
+	local edge2 = v6.edge
+	local position3 = v6.box.Position
+	v6.edge.Size = v6.box.Size
+	edge2.Position = position3
+	v6.name.Visible = tbl4.name
+	v6.name.Text = arg == v2 and ("[ %* ]"):format(arg.DisplayName) or arg.DisplayName
+	local name = v6.name
+	v6.name.Position = Vector2.new(v11.X, y - 17)
+	name.Color = v10
+	v6.info.Visible = tbl4.info
+	v6.info.Text = lore(arg, magnitude)
+	v6.info.Position = Vector2.new(v11.X, y + n2 + 2)
+	local n5 = math.clamp(v8.Health / math.max(v8.MaxHealth, 1), 0, 1)
+	local v15 = Color3.fromRGB(255, 60, 60):Lerp(Color3.fromRGB(80, 230, 120), n5)
+	local fill = v6.fill
+	local bar = tbl4.bar
+	v6.back.Visible = tbl4.bar
+	fill.Visible = bar
+	local back = v6.back
+	local back2 = v6.back
+	local vector23 = Vector2.new(n4 - 6, y - 1)
+	local vector24 = Vector2.new(4, n2 + 2)
+	back.Position = vector23
+	back2.Size = vector24
+	local fill2 = v6.fill
+	local fill3 = v6.fill
+	local fill4 = v6.fill
+	local vector25 = Vector2.new(n4 - 5, y + n2 * (1 - n5))
+	local vector26 = Vector2.new(2, n2 * n5)
+	fill2.Position = vector25
+	fill3.Size = vector26
+	fill4.Color = v15
+	v6.hp.Visible = tbl4.hpText
+	v6.hp.Text = ("%*"):format(math.floor(v8.Health))
+	local hp = v6.hp
+	v6.hp.Position = Vector2.new(n4 - 10 - v6.hp.TextBounds.X, y + n2 * (1 - n5) - 6)
+	hp.Color = v15
+	v6.line.Visible = tbl4.tracer
+	v6.line.From = tbl4.tracerFrom == "Center" and arg3 / 2 or tbl4.tracerFrom == "Mouse" and arg4 or Vector2.new(arg3.X / 2, arg3.Y)
+	local line = v6.line
+	v6.line.To = Vector2.new(v11.X, v13.Y)
+	line.Color = v10
+end
+
+aimLine = function(arg, arg2, from)
+	local tl = Esp.tl
+	local mark = Esp.mark
+	tl.Visible = false
+	mark.Visible = false
+	local flag6 = not v3
+
+	if not flag6 then
+		flag6 = not (tbl4.esp or tbl4.aimbot or tbl4.silent or tbl4.aura or v4)
+	end
+
+	if flag6 then
+		return
+	end
+	local v5, v6 = currentCamera:WorldToViewportPoint(v3.Position)
+	if not v6 then
+		return
+	end
+	local vector2 = Vector2.new(v5.X, v5.Y)
+
+	if tbl4.lineFrom == "Character" and arg then
+		local v7 = currentCamera:WorldToViewportPoint(arg.Position)
+		from = Vector2.new(v7.X, v7.Y)
+	elseif tbl4.lineFrom == "Bottom" then
+		from = Vector2.new(arg2.X / 2, arg2.Y)
+	end
+
+	local v7 = tbl5[tbl4.tgtColor]
+	tl.Visible = tbl4.tgtLine
+	tl.From = from
+	tl.To = vector2
+	tl.Color = v7
+	local v8 = tbl5[tbl4.tgtColor]
+	mark.Visible = tbl4.tgtMark
+	mark.Position = vector2
+	mark.Color = v8
+end
+
+Esp.step = function()
+	if not flag5 then
+		return
+	end
+	local viewportSize = currentCamera.ViewportSize
+	local mouseLocation = UserInputService:GetMouseLocation()
+	local v5, v6, v7 = alive(localPlayer)
+	local position3 = v7 and v7.Position or currentCamera.CFrame.Position
+
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= localPlayer then
+			paint(player, position3, viewportSize, mouseLocation)
+		end
+	end
+
+	Esp.fov.Visible = tbl4.showFov and tbl4.useFov and (tbl4.aimbot or tbl4.silent)
+	local fov = Esp.fov
+	local fov2 = tbl4.fov
+	Esp.fov.Position = mouseLocation
+	fov.Radius = fov2
+	aimLine(v7, viewportSize, mouseLocation)
+end
+
+Esp.clear = function()
+	for k in pairs(Esp.pool) do
+		drop(k)
+	end
+
+	for _, v5 in ipairs({ "fov", "tl", "mark" }) do
+		if Esp[v5] then
+			pcall(function()
+				Esp[v5]:Destroy()
+			end)
+		end
+
+		Esp[v5] = nil
+	end
+end
+
+if flag5 then
+	Esp.fov = draw("Circle", {
+		Thickness = 1,
+		NumSides = 64,
+		Filled = false,
+		Transparency = 0.7,
+		Color = Color3.new(1, 1, 1),
+		Visible = false,
+	})
+
+	Esp.tl = draw("Line", { Thickness = 2, Visible = false })
+	Esp.mark = draw("Circle", { Thickness = 2, NumSides = 24, Radius = 8, Filled = false, Visible = false })
+end
+
+frame = function(arg)
+	currentCamera = v.CurrentCamera
+	local v5, v6, v7 = alive(localPlayer)
+	position = v7 and v7.Position
+	position2 = mouse.Hit.Position
+	unit2 = position and (position2 - position).Unit
+	local v8, v9 = pick()
+	v2 = v8
+	v3 = v9
+	flag2 = false
+	n = v3 and v3.Position + v3.AssemblyLinearVelocity * tbl4.pred
+	unit = n and position and (n - position).Unit
+	local silent = tbl4.silent
+
+	if not silent then
+		local aimUntil = Gun.aimUntil
+		silent = os.clock() < aimUntil
+	end
+
+	flag2 = silent and flag3 and unit ~= nil
+
+	if v2 ~= Move.lastTgt then
+		local lastTgt = Move.lastTgt
+		Move.lastTgt = v2
+		local character = lastTgt and lastTgt.Character
+		character = character and character:FindFirstChildOfClass("Humanoid")
+
+		if tbl4.killNote and character and character.Health <= 0 and UI.note then
+			UI.note(("Killed %*"):format(lastTgt.DisplayName), "good")
+		end
+	end
+
+	if tbl4.aimbot and n and triggered() then
+		local n2 = 1 - tbl4.smooth ^ (arg * 60)
+		currentCamera.CFrame = currentCamera.CFrame:Lerp(CFrame.lookAt(currentCamera.CFrame.Position, n), n2)
+	end
+
+	local v10, v11 = alive(v2)
+
+	if tbl4.spectate and v11 then
+		if currentCamera.CameraSubject ~= v11 then
+			currentCamera.CameraSubject = v11
+		end
+
+		flag4 = true
+	elseif flag4 and v6 then
+		currentCamera.CameraSubject = v6
+		flag4 = false
+	end
+
+	Esp.step()
+end
+
+tgtText = function()
+	if not v2 then
+		return "No target"
+	end
+	local v5, v6, v7 = alive(v2)
+	if not v5 then
+		return (("%* dead"):format(v2.DisplayName))
+	end
+	local magnitude = position and (v7.Position - position).Magnitude or 0
+	local concat = table.concat
+	local tbl10 = {}
+	local str = ("%* (@%*)%*"):format(v2.DisplayName, v2.Name, v4 == v2 and "  LOCKED" or "")
+	local v8 = lore
+	local str2 = ("HP %*/%*  |  %*"):format(math.floor(v6.Health), math.floor(v6.MaxHealth), v8(v2, magnitude))
+	local str3 = ("Team %*"):format(v2.Team and v2.Team.Name or "None")
+	tbl10[1] = str
+	tbl10[2] = str2
+	tbl10[3] = str3
+	return concat(tbl10, "\n")
+end
+
+sweep = function()
+	local tbl10 = { localPlayer:FindFirstChildOfClass("PlayerGui") }
+
+	local ok, result = pcall(function()
+		return gethui and gethui()
+	end)
+
+	if ok and typeof(result) == "Instance" then
+		tbl10[#tbl10 + 1] = result
+	end
+
+	local ok2, result2 = pcall(function()
+		return game:GetService("CoreGui")
+	end)
+
+	if ok2 and result2 then
+		tbl10[#tbl10 + 1] = result2
+	end
+
+	for _, v5 in ipairs(tbl10) do
+		pcall(function()
+			for _, child in ipairs(v5:GetChildren()) do
+				if child.Name == "NightHub" then
+					child:Destroy()
 				end
 			end
-		end
-
-		if #tbl6 <= 0 then
-			return
-		end
-
-		table.sort(tbl6, function(arg, arg2)
-			return arg.Age < arg2.Age
 		end)
+	end
+end
 
-		for _, v3 in ipairs(tbl6) do
-			local jobId = v3.JobId
+buildUI = function()
+	sweep()
 
-			tbl3.Library:Notify({
-				Title = "Joining Server Have Fruit",
-				Content = "Fruit Name: " .. tostring(v3.Name) .. " JobId: " .. jobId .. " Age: " .. tostring(v3.Age),
-				Duration = 3,
-			})
+	local ok, night = pcall(function()
+		return loadstring(game:HttpGet("https://raw.githubusercontent.com/WhiteX1208/Scripts/refs/heads/main/Ui-Library/V2Loader.luau"))()
+	end)
 
-			game.ReplicatedStorage.__ServerBrowser:InvokeServer("teleport", v3.JobId)
-			task.wait(0.3)
+	if (not ok or type(night) ~= "table") and type(isfile) == "function" and type(readfile) == "function" and isfile("NightGlass.lua") then
+		ok, night = pcall(function()
+			return loadstring(readfile("NightGlass.lua"))()
+		end)
+	end
+
+	if not ok or type(night) ~= "table" then
+		genv.gethui = gethui_
+		return false, night
+	end
+
+	local v5 = night:CreateWindow({
+		Title = tbl.Name,
+		SubTitle = tbl.Game,
+		Size = UDim2.fromOffset(680, 480),
+		TabWidth = 142,
+		Key = Enum.KeyCode.RightControl,
+		MinimizeKey = Enum.KeyCode.RightControl,
+		Glass = false,
+		Settings = { Save = true, Main = tbl.Name, Folder = tbl.Name, Game = "BloxFruitsPvp" },
+	})
+
+	local tbl10 = {
+		fight = v5:AddTab({ Title = "Combat", Icon = "crosshair" }),
+		aura = v5:AddTab({ Title = "Kill Aura", Icon = "swords" }),
+		eye = v5:AddTab({ Title = "Visuals", Icon = "eye" }),
+		body = v5:AddTab({ Title = "Player", Icon = "user" }),
+		conf = v5:AddTab({ Title = "Settings", Icon = "settings" }),
+	}
+
+	genv.gethui = gethui_
+	local tbl11 = {}
+	local tbl12 = {}
+
+	local function note(arg, arg2)
+		pcall(function()
+			night:Notify({ Kind = arg2 or "info", Title = tbl.Name, Content = arg, Duration = 4 })
+		end)
+	end
+
+	local function fn(arg, arg2, arg3, arg4)
+		tbl11[arg2] = arg:AddParagraph({ Title = arg3, Content = "...", Icon = arg4 })
+	end
+
+	local function post(arg, arg2)
+		local v6 = tbl11[arg]
+
+		if v6 then
+			pcall(function()
+				v6:SetContent(arg2)
+			end)
 		end
 	end
 
-	local function fn6()
-		local serverBrowser = replicatedStorage:WaitForChild("__ServerBrowser")
+	local function mirror(arg, arg2)
+		local v6 = tbl12[arg]
 
-		for i = 1, 100 do
-			for k, v2 in next, serverBrowser:InvokeServer(i), nil do
-				if game.JobId ~= k and v2.Count <= 12 then
-					serverBrowser:InvokeServer("teleport", k)
-					task.wait(0.3)
-				end
-			end
+		if v6 then
+			pcall(function()
+				v6:SetValue(arg2, true)
+			end)
 		end
 	end
 
-	tbl3.Functions["Fix lag when executing script"] = function()
-		if v.KaitunFruit.FixedLag then
-			return
-		end
-		v.KaitunFruit.FixedLag = true
+	local function fn2(arg, arg2, arg3, arg4)
+		local v6 = arg:AddSection(arg2, arg4)
 
 		pcall(function()
-			for _, descendant in pairs(lighting:GetDescendants()) do
-				if descendant:IsA("Atmosphere") then
-					descendant:Destroy()
-				end
-			end
-
-			local terrain = workspace:FindFirstChildOfClass("Terrain")
-
-			if terrain then
-				terrain.WaterWaveSize = 0
-				terrain.WaterWaveSpeed = 0
-				terrain.WaterReflectance = 0
-				terrain.WaterTransparency = 1
-			end
-
-			lighting.GlobalShadows = false
-			lighting.FogStart = 9e9
-			lighting.FogEnd = 9e9
-
-			for _, descendant in ipairs(lighting:GetDescendants()) do
-				if descendant:IsA("PostEffect") then
-					descendant.Enabled = false
-				end
-			end
-
-			local UserGameSettings = UserSettings():GetService("UserGameSettings")
-			UserGameSettings.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
-			UserGameSettings.MasterVolume = 0
-
-			if sethiddenproperty then
-				sethiddenproperty(UserGameSettings, "GraphicsQualityLevel", 1)
-			end
-
-			SoundService.Volume = 0
+			v6:SetIcon(arg3)
 		end)
 
-		local function fn7(arg)
-			if arg:IsA("BasePart") then
-				arg.CastShadow = false
-				arg.Material = Enum.Material.Plastic
-				arg.Reflectance = 0
-			elseif arg:IsA("Decal") then
-				arg.Texture = ""
-				arg.Transparency = 1
-			elseif arg:IsA("ParticleEmitter") then
-				arg.Lifetime = NumberRange.new(0)
-			elseif arg:IsA("Trail") then
-				arg.Lifetime = 0
-			elseif arg:IsA("ForceField") or arg:IsA("Sparkles") or arg:IsA("Smoke") or arg:IsA("Fire") or arg:IsA("Beam") then
-				task.defer(function()
-					pcall(function()
-						arg:Destroy()
-					end)
-				end)
-			end
-		end
-
-		for i, descendant in ipairs(workspace:GetDescendants()) do
-			pcall(fn7, descendant)
-
-			if i % 5000 == 0 then
-				task.wait()
-			end
-		end
-
-		wait(1)
+		return v6
 	end
 
-	tbl3.Functions["Store Fruit"] = function()
-		local character = players.Character
-		local backpack = players:FindFirstChild("Backpack")
-		if not character or not backpack then
-			return
-		end
+	local function fn3(arg, arg2, arg3, arg4, arg5, arg6)
+		tbl12[arg2] = arg:AddToggle(arg2, {
+			Title = arg3,
+			Description = arg4,
+			Icon = arg5,
+			Default = tbl4[arg2],
+			Callback = function(arg7)
+				tbl4[arg2] = arg7
 
-		for _, child in pairs(character:GetChildren()) do
-			if child.Name:find("Fruit") and child:GetAttribute("OriginalName") then
-				replicatedStorage.Remotes.CommF_:InvokeServer("StoreFruit", child:GetAttribute("OriginalName"), child)
-				task.wait(0.1)
-			end
-		end
-
-		for _, child in pairs(backpack:GetChildren()) do
-			if child.Name:find("Fruit") and child:GetAttribute("OriginalName") then
-				replicatedStorage.Remotes.CommF_:InvokeServer("StoreFruit", child:GetAttribute("OriginalName"), child)
-				task.wait(0.1)
-			end
-		end
-	end
-
-	tbl3.Functions.Start = function()
-		if bypassTP.Runtime.Bypassing then
-			return
-		end
-		local v2 = fn3()
-		local v3 = playerMD.GetHRP()
-
-		if #v2 > 0 and v3 then
-			local v4 = v2[1]
-
-			if v4.Name == "Fruit " then
-				fn2(v4.Handle.CFrame)
-			else
-				firetouchinterest(v4.Handle, v3, 1)
-				firetouchinterest(v4.Handle, v3, 0)
-			end
-		elseif #v2 <= 0 then
-			task.wait(tonumber(tbl2["Hop Delay"]) or 1.5)
-
-			if v.KaitunFruit.UsingHopApi then
-				fn5()
-			else
-				fn6()
-			end
-		end
-	end
-
-	spawn(function()
-		while wait() do
-			for k, v2 in next, tbl3.Functions, nil do
-				fn(k, v2)
-			end
-		end
-	end)
-
-	spawn(function()
-		while wait() do
-			local v2 = fn3()
-
-			if #v2 > 0 then
-				for k, v3 in pairs(v2) do
-					v2[k] = v3.Name
+				if arg6 then
+					arg6(arg7)
 				end
+			end,
+		})
+	end
 
-				tbl3.Features.Status["Fruits In Server"]:SetDesc(table.concat(v2, ", "))
-			else
-				tbl3.Features.Status["Fruits In Server"]:SetDesc("No Fruit Found.")
+	local function fn4(arg, arg2, arg3, arg4, arg5, arg6, arg7, arg8)
+		arg:AddSlider(arg2, {
+			Title = arg3,
+			Description = arg4,
+			Icon = arg5,
+			Min = arg6,
+			Max = arg7,
+			Default = tbl4[arg2],
+			Rounding = arg8 or 0,
+			Callback = function(arg9)
+				tbl4[arg2] = arg9
+			end,
+		})
+	end
+
+	local function fn5(arg, arg2, arg3, arg4, arg5, arg6)
+		arg:AddDropdown(arg2, {
+			Title = arg3,
+			Description = arg4,
+			Icon = arg5,
+			Values = arg6,
+			Default = tbl4[arg2],
+			Callback = function(arg7)
+				tbl4[arg2] = arg7
+			end,
+		})
+	end
+
+	local function fn6(arg, arg2, arg3, arg4, arg5)
+		arg:AddKeybind(arg2, { Title = arg3, Description = arg4, Icon = arg5, Default = tbl4[arg2], Mode = "Toggle" })
+		local options = night.Options and night.Options[arg2]
+
+		if options and options.OnChanged then
+			options:OnChanged(function(arg6)
+				tbl4[arg2] = keyName(arg6)
+			end)
+		end
+	end
+
+	local targeting = fn2(tbl10.fight, "Targeting", "target", "shared by aimbot, silent aim, kill aura and visuals")
+	fn5(targeting, "pickMode", "Pick target by", "Smart scores distance, health and cursor together, finishes anyone under 25% first and only swaps target when a clearly better one shows up. The others use a single rule.", "list-filter", { "Smart", "Nearest cursor", "Nearest distance", "Lowest health" })
+	fn4(targeting, "smartHp", "Smart: health vs distance", "0 picks purely the closest, 100 purely the weakest. Only used by Smart.", "scale", 0, 100, 0)
+	fn3(targeting, "killNote", "Kill Notify", "Shows a notification when your target dies.", "skull")
+	fn5(targeting, "part", "Aim part", "Falls back to HumanoidRootPart when the part is missing.", "scan", { "Head", "HumanoidRootPart" })
+	fn3(targeting, "useFov", "Limit To FOV", "Only players inside the circle around your cursor can be picked.", "circle-dashed")
+	fn4(targeting, "fov", "FOV radius", "In screen pixels.", "circle", 30, 600, 0)
+	fn4(targeting, "maxDist", "Max distance", "Studs from your character.", "ruler", 50, 5000, 0)
+	fn4(targeting, "pred", "Prediction", "Leads the aim point by the target's velocity times this many seconds. Raise it for slow projectiles.", "trending-up", 0, 0.5, 2)
+	fn3(targeting, "teamCheck", "Team Check", "Skips other Marines while you are a Marine, the game blocks that damage anyway.", "shield")
+	fn3(targeting, "wallCheck", "Wall Check", "Ignores anyone behind a wall from the camera's point of view.", "brick-wall")
+	fn3(targeting, "skipFriends", "Ignore Friends", "Never picks a Roblox friend.", "heart")
+	fn6(targeting, "lockKey", "Lock target key", "Press once to stick to the current target until it dies or you press again.", "lock")
+	fn(targeting, "target", "Current target", "user")
+	local aimbot = fn2(tbl10.fight, "Aimbot", "crosshair")
+	fn3(aimbot, "aimbot", "Aimbot", "Turns the camera onto the target.", "crosshair")
+	fn5(aimbot, "aimTrigger", "Trigger", "When the camera is allowed to lock on.", "mouse-pointer", { "Hold right mouse", "Hold key", "Always" })
+	fn6(aimbot, "aimKey", "Aim key", "Only used while Trigger is Hold key.", "keyboard")
+	fn4(aimbot, "smooth", "Smoothness", "0 snaps instantly, higher values glide onto the target.", "wind", 0, 0.95, 2)
+	local silentAim = fn2(tbl10.fight, "Silent Aim", "scan-eye")
+
+	fn3(silentAim, "silent", "Silent Aim", "Skills, fruit clicks and guns fly at the target while your camera stays free. Every position or direction the game sends that matches where your mouse points gets swapped for the target's predicted position.", "scan-eye", function(arg)
+		if not arg then
+			return
+		end
+		local v6, v7 = hook()
+		if v6 then
+			return
+		end
+		tbl4.silent = false
+		mirror("silent", false)
+		note(("Silent aim: %*"):format(v7), "warn")
+	end)
+
+	fn4(silentAim, "chance", "Hit chance", "Percent of shots that get redirected.", "percent", 1, 100, 0)
+	local pvPMode = fn2(tbl10.fight, "PvP Mode", "flame")
+
+	pvPMode:AddButton({
+		Title = "PvP Mode",
+		Description = "Turns on Smart target, silent aim, Smart fly, auto skills, no stun, anti aim, auto dodge, hitbox, auto haki and ESP in one go.",
+		Icon = "flame",
+		Label = "Enable",
+		Callback = function()
+			local options = night.Options or {}
+
+			for k, v6 in pairs({
+				pickMode = "Smart",
+				silent = true,
+				fly = true,
+				flyMode = "Smart",
+				autoSkill = true,
+				noStun = true,
+				antiAim = true,
+				dodge = true,
+				hitbox = true,
+				buso = true,
+				ken = true,
+				esp = true,
+				killNote = true,
+			}) do
+				local v7 = options[k]
+
+				if v7 and v7.SetValue then
+					pcall(function()
+						v7:SetValue(v6)
+					end)
+				else
+					tbl4[k] = v6
+				end
 			end
+
+			note("PvP Mode on", "good")
+		end,
+	})
+
+	fn3(pvPMode, "autoSkill", "Auto Skills", "Presses the chosen skill keys while the target is in range. Each press forces silent aim so the skill flies at the target.", "flame", function(arg)
+		if not arg then
+			return
+		end
+		local v6, v7 = hook()
+		if v6 then
+			return
+		end
+		tbl4.autoSkill = false
+		mirror("autoSkill", false)
+		note(("Auto skills: %*"):format(v7), "warn")
+	end)
+
+	pvPMode:AddDropdown("skillKeys", {
+		Title = "Skill keys",
+		Description = "Pressed in this order, Z first.",
+		Icon = "keyboard",
+		Values = { "Z", "X", "C", "V", "F" },
+		Multi = true,
+		Default = { "Z", "X", "C", "V" },
+		Callback = function(skillKeys)
+			tbl4.skillKeys = skillKeys
+		end,
+	})
+
+	fn4(pvPMode, "skillRange", "Skill range", "Studs to the target.", "ruler", 10, 300, 0)
+	fn4(pvPMode, "skillHold", "Hold time", "Seconds each key is held. Raise it for charged skills.", "timer", 0.03, 2, 2)
+	fn4(pvPMode, "skillGap", "Gap between skills", "Seconds.", "timer", 0.05, 2, 2)
+	local hitbox = fn2(tbl10.fight, "Hitbox", "box")
+	fn3(hitbox, "hitbox", "Hitbox Expander", "Grows every enemy's HumanoidRootPart on your screen so melee, swords and skills connect from further away.", "box")
+	fn4(hitbox, "hitboxSize", "Hitbox size", "Studs on each side.", "maximize", 4, 40, 0)
+	fn3(hitbox, "hitboxShow", "Show Hitbox", "Draws the enlarged box faintly.", "eye")
+	local autoGun = fn2(tbl10.fight, "Auto Gun", "target")
+
+	fn3(autoGun, "autoGun", "Auto Shoot", "When the target is in range, equips the gun, aims at the target through the silent aim hook for that shot only, fires, then goes back to what you held.", "flame", function(arg)
+		if not arg then
+			return
+		end
+		local v6, v7 = hook()
+		if v6 then
+			return
+		end
+		tbl4.autoGun = false
+		mirror("autoGun", false)
+		note(("Auto gun: %*"):format(v7), "warn")
+	end)
+
+	fn5(autoGun, "gunPick", "Gun", "Dragonstorm matches by name, Any gun takes the first gun in your backpack.", "crosshair", { "Dragonstorm", "Any gun" })
+	fn4(autoGun, "gunRange", "Fire range", "Studs to the target.", "locate", 20, 400, 0)
+	fn4(autoGun, "gunRate", "Fire delay", "Seconds between shots.", "timer", 0.1, 2, 2)
+	fn3(autoGun, "gunSkills", "Use Gun Skills", "Also presses Z and X on each shot.", "wand-2")
+	fn3(autoGun, "gunBack", "Swap Back", "Re-equips your previous weapon after the shot.", "undo-2")
+	fn(autoGun, "gun", "Auto Gun", "activity")
+	local killAura = fn2(tbl10.aura, "Kill Aura", "swords")
+	fn3(killAura, "aura", "Kill Aura", "Swings your melee or sword at players in range, the hit list is built client side.", "swords")
+	fn3(killAura, "auraAll", "Hit Everyone In Range", "Off means only the current target gets hit.", "users")
+	fn4(killAura, "auraRange", "Range", "Studs.", "locate", 5, 100, 0)
+	fn4(killAura, "auraRate", "Swing delay", "Seconds between swings.", "timer", 0.05, 1, 2)
+	fn5(killAura, "auraWeapon", "Weapon", "Keep current uses whatever melee or sword you hold. Melee or Sword equips one from your backpack.", "hand", { "Keep current", "Melee", "Sword" })
+	fn(killAura, "aura", "Kill Aura", "activity")
+	local v6 = fn2(tbl10.aura, "Haki & Race", "flame")
+	fn3(v6, "buso", "Auto Buso Haki", "Turns armament back on whenever it drops.", "shield-plus")
+	fn3(v6, "ken", "Auto Observation", "Fires observation every 10 seconds.", "eye")
+	fn3(v6, "race", "Auto Race Ability", "Fires your race ability every 5 seconds.", "flame")
+
+	v6:AddButton({
+		Title = "Use race ability",
+		Icon = "flame",
+		Label = "Use",
+		Callback = function()
+			local v7, v8 = race()
+
+			if not v7 then
+				note(("Race: %*"):format(v8), "warn")
+			end
+		end,
+	})
+
+	local playerEsp = fn2(tbl10.eye, "Player ESP", "eye")
+
+	if not flag5 then
+		fn(playerEsp, "draw", "Drawing API", "triangle-alert")
+	end
+
+	fn3(playerEsp, "esp", "ESP", "Master switch for everything in this section.", "eye")
+	fn3(playerEsp, "box", "Box", "2D box around each player.", "square")
+	fn3(playerEsp, "name", "Name", "Display name above the box.", "type")
+	fn3(playerEsp, "info", "Info", "Level, distance and fruit under the box.", "info")
+	fn3(playerEsp, "bar", "Health Bar", "Bar on the left side of the box.", "heart-pulse")
+	fn3(playerEsp, "hpText", "Health Number", "Current HP next to the bar.", "hash")
+	fn3(playerEsp, "chams", "Chams", "Highlights bodies through walls.", "layers")
+	fn3(playerEsp, "tracer", "Tracers", "A line to every player.", "git-commit-horizontal")
+	fn5(playerEsp, "tracerFrom", "Tracer origin", "Where the lines start on screen.", "move", { "Bottom", "Center", "Mouse" })
+	fn4(playerEsp, "espDist", "ESP distance", "Studs.", "ruler", 100, 10000, 0)
+	fn5(playerEsp, "espColor", "ESP color", "Used when Team Color is off.", "palette", tbl6)
+	fn3(playerEsp, "teamColor", "Team Color", "Colors each player by their team.", "flag")
+	local targetVisuals = fn2(tbl10.eye, "Target Visuals", "target")
+	fn3(targetVisuals, "showFov", "Show FOV Circle", "Only drawn while aimbot or silent aim is on.", "circle-dashed")
+	fn3(targetVisuals, "tgtLine", "Target Line", "Draws a line to the current target.", "spline")
+	fn5(targetVisuals, "lineFrom", "Line origin", "Where the target line starts.", "move", { "Character", "Bottom", "Mouse" })
+	fn3(targetVisuals, "tgtMark", "Target Marker", "Rings the target and recolors its ESP.", "crosshair")
+	fn5(targetVisuals, "tgtColor", "Target color", "Color for the line, marker and target ESP.", "palette", tbl6)
+	local speed = fn2(tbl10.body, "Speed", "gauge")
+
+	local function fn7(arg)
+		if not arg then
+			return
+		end
+		local v7, v8 = hook()
+
+		if not v7 then
+			note(("%*, the game may reset the value"):format(v8), "warn")
+		end
+	end
+
+	fn3(speed, "speed", "Walk Speed", "Holds your WalkSpeed. The game's own writes are swapped for your value and its reads get the old value back, so it stops resetting you.", "gauge", fn7)
+	fn4(speed, "speedValue", "Speed", "WalkSpeed while the toggle is on.", "gauge", 16, 350, 0)
+	fn3(speed, "jumpOn", "Jump Power", "Same trick for JumpPower and JumpHeight.", "arrow-up", fn7)
+	fn4(speed, "jumpValue", "Jump", "JumpPower while the toggle is on.", "arrow-up", 50, 400, 0)
+	fn3(speed, "noclip", "Noclip", "Walk through walls.", "ghost")
+	local survival = fn2(tbl10.body, "Survival", "heart-pulse")
+	fn3(survival, "noStun", "No Stun", "Blocks the game from zeroing your speed, anchoring you, platform standing or ragdolling you, and clears the Stun and Busy values on your character when they exist.", "shield-off", fn7)
+	fn5(survival, "moverFilter", "Stun filter", "Smart keeps velocity pushing you the way you face, so your own dashes and flash steps still work. Remove all deletes every BodyVelocity, BodyPosition and similar mover the game puts on you.", "filter", { "Smart", "Remove all" })
+	fn3(survival, "escape", "Escape At Low HP", "Jumps you straight up once when your health drops under the limit.", "shield-alert")
+	fn4(survival, "escapeHp", "HP limit", "Percent of max health.", "heart", 5, 80, 0)
+	fn4(survival, "escapeUp", "Escape height", "Studs.", "arrow-up", 50, 1000, 0)
+	local flyToTarget = fn2(tbl10.body, "Fly To Target", "plane")
+	fn3(flyToTarget, "fly", "Fly To Target", "Flies to the current target. Kite stays behind its back at a safe distance and sways sideways. Predict parks where it is heading, in front of it, so it gets hit. Orbit circles around it.", "plane")
+	fn6(flyToTarget, "flyKey", "Fly key", "Toggles Fly To Target.", "keyboard")
+	fn5(flyToTarget, "flyMode", "Mode", "Smart attacks from behind when the fight is in your favour and kites when it is not. Kite always keeps distance, Predict parks in front, Orbit circles.", "compass", { "Smart", "Kite", "Predict", "Orbit" })
+	fn4(flyToTarget, "engageDist", "Smart: attack distance", "Studs behind the target while attacking.", "swords", 3, 30, 0)
+	fn4(flyToTarget, "engageEdge", "Smart: HP disadvantage allowed", "Still attacks while your HP percent is up to this much lower than the target's.", "scale", 0, 50, 0)
+	fn4(flyToTarget, "retreatHp", "Smart: retreat below HP", "Your HP percent that switches to kiting.", "heart", 10, 80, 0)
+	fn4(flyToTarget, "gankRange", "Smart: gank range", "Two or more enemies this close makes you back off.", "users", 20, 150, 0)
+	fn4(flyToTarget, "kiteDist", "Kite distance", "Studs behind the target in Kite mode.", "ruler", 8, 80, 0)
+	fn4(flyToTarget, "kiteSway", "Kite sway", "How far you swing side to side in Kite mode.", "move", 0, 20, 0)
+	fn4(flyToTarget, "flySpeed", "Speed", "Studs per second.", "gauge", 50, 400, 0)
+	fn4(flyToTarget, "flySafe", "Speed after pull back", "Used for 6 seconds whenever the server snaps you back, then it tries the normal speed again.", "gauge", 50, 400, 0)
+	fn4(flyToTarget, "flyDist", "Distance", "Studs from the target in Predict mode.", "ruler", 2, 20, 0)
+	fn4(flyToTarget, "flyUp", "Height", "Studs above the target.", "arrow-up", 0, 30, 0)
+	fn4(flyToTarget, "orbitRadius", "Orbit radius", "Studs.", "circle", 4, 40, 0)
+	fn4(flyToTarget, "orbitSpeed", "Orbit speed", "Radians per second.", "rotate-cw", 0.5, 8, 1)
+	fn3(flyToTarget, "flyNoclip", "Noclip While Flying", "Passes through walls on the way.", "ghost")
+	fn(flyToTarget, "fly", "Fly", "activity")
+	local defense = fn2(tbl10.body, "Defense", "shield")
+	fn3(defense, "antiAim", "Anti Aim", "Other players see a fake random velocity on you while you move normally, so aimbots and silent aims that lead their shots by your velocity miss.", "shield")
+	fn4(defense, "antiAimPower", "Anti aim strength", "Size of the fake velocity.", "gauge", 50, 1000, 0)
+	fn3(defense, "dodge", "Auto Dodge", "Side steps when an enemy in range turns to face you.", "move")
+	fn4(defense, "dodgeRange", "Dodge range", "Studs.", "ruler", 8, 60, 0)
+	fn4(defense, "dodgeDist", "Dodge distance", "Studs per side step.", "move", 5, 40, 0)
+	fn4(defense, "dodgeCd", "Dodge cooldown", "Seconds between side steps.", "timer", 0.3, 5, 1)
+	local targetMovement = fn2(tbl10.body, "Target Movement", "move")
+	fn3(targetMovement, "stick", "Stick To Target", "Pins you behind and above the target every frame. Only engages inside the range below so it never jumps across the map.", "magnet")
+	fn4(targetMovement, "stickUp", "Height", "Studs above the target.", "arrow-up", 0, 80, 0)
+	fn4(targetMovement, "stickBack", "Behind", "Studs behind the target.", "arrow-left", 1, 15, 0)
+	fn4(targetMovement, "stickRange", "Engage range", "Studs.", "locate", 20, 300, 0)
+	fn3(targetMovement, "spectate", "Spectate Target", "Moves your camera onto the target.", "video")
+	fn3(fn2(tbl10.body, "Movement", "footprints"), "infJump", "Infinite Jump", "Jump again in mid air.", "arrow-up-from-line")
+	local misc = fn2(tbl10.conf, "Misc", "settings")
+
+	fn3(misc, "antiAfk", "Anti AFK", "Disables the idle kick connection.", "coffee", function()
+		local v7, v8 = antiAfk()
+
+		if not v7 then
+			note(("Anti AFK: %*"):format(v8), "warn")
 		end
 	end)
-end
 
-tbl3.JoinTeam = function()
-	if players.Team == nil then
-		replicatedStorage.Remotes.CommF_:InvokeServer("SetTeam", v.KaitunFruit.Team)
+	misc:AddKeybind("uiKey", {
+		Title = "Toggle key",
+		Description = "Click the box on the right, then press a new key.",
+		Icon = "keyboard",
+		Default = "RightControl",
+		Mode = "Toggle",
+	})
+
+	local uiKey = night.Options and night.Options.uiKey
+
+	if uiKey and uiKey.OnChanged then
+		uiKey:OnChanged(function(arg)
+			v5:SetKey(arg)
+		end)
 	end
+
+	misc:AddButton({
+		Title = "Unload",
+		Description = "Stops every loop, removes the drawings and closes this window.",
+		Icon = "power",
+		Label = "Unload",
+		Callback = function()
+			v5:Dialog({
+				Title = "Unload the script",
+				Content = "Everything turns off and the window closes.",
+				Buttons = {
+					{
+						Title = "Unload",
+						Filled = true,
+						Callback = function()
+							if genv.NightPvp then
+								genv.NightPvp.Unload()
+							end
+						end,
+					},
+					{ Title = "Cancel" },
+				},
+			})
+		end,
+	})
+
+	if tbl10.conf.AddInterface then
+		pcall(function()
+			tbl10.conf:AddInterface()
+		end)
+	end
+
+	if not flag5 then
+		post("draw", "Your executor has no Drawing API, only Chams will show")
+	end
+
+	local v7 = UI
+	local v8 = UI
+	local v9 = UI
+	local v10 = UI
+	UI.Night = night
+	v7.Window = v5
+	v8.note = note
+	v9.post = post
+	v10.mirror = mirror
+	return true
 end
 
-tbl3.Authenticate()
-tbl3.JoinTeam()
-tbl3.InitModules()
-tbl3.InitSettings()
-tbl3.LoadLibrary()
-tbl3.MakeFunctions()
+unload = function()
+	flag = false
+	flag2 = false
+
+	pcall(function()
+		RunService:UnbindFromRenderStep("NightPvpAim")
+	end)
+
+	if flag4 then
+		local v5, v6 = alive(localPlayer)
+
+		if v6 then
+			currentCamera.CameraSubject = v6
+		end
+	end
+
+	for _, v5 in ipairs(tbl2) do
+		pcall(function()
+			v5:Disconnect()
+		end)
+	end
+
+	table.clear(tbl2)
+	local v5 = tbl4
+	local v6 = tbl4
+	local v7 = tbl4
+	local v8 = tbl4
+	local v9 = tbl4
+	local v10 = tbl4
+	local v11 = tbl4
+	local v12 = tbl4
+	tbl4.speed = false
+	v5.jumpOn = false
+	v6.noclip = false
+	v7.autoGun = false
+	v8.noStun = false
+	v9.fly = false
+	v10.hitbox = false
+	v11.antiAim = false
+	v12.dodge = false
+	tbl4.autoSkill = false
+	pcall(antiAimStep)
+	pcall(hitboxes)
+	pcall(movement)
+	pcall(noclip)
+	Move.on = false
+	pcall(Esp.clear)
+
+	if not (UI.Night and UI.Night.Glass) then
+		pcall(function()
+			UI.Window:Close()
+		end)
+	end
+
+	pcall(function()
+		UI.Night:Destroy()
+	end)
+
+	genv.NightPvp = nil
+end
+
+local ok, result, result2 = pcall(buildUI)
+genv.gethui = gethui_
+
+if not ok or not result then
+	local v5 = warn
+	local str = ("! UI: %*"):format(ok and result2 or result)
+	v5(str)
+	Esp.clear()
+	return
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+	befriend(player)
+end
+
+bind(Players.PlayerAdded:Connect(befriend))
+
+bind(Players.PlayerRemoving:Connect(function(player)
+	drop(player)
+	tbl3[player.UserId] = nil
+
+	if v4 == player then
+		v4 = nil
+	end
+end))
+
+bind(UserInputService.InputBegan:Connect(function(input)
+	if UserInputService:GetFocusedTextBox() or input.KeyCode.Name ~= tbl4.lockKey then
+		return
+	end
+
+	if v4 then
+		v4 = nil
+		UI.note("Target unlocked")
+		return
+	end
+
+	if not v2 then
+		return UI.note("No target", "warn")
+	end
+	v4 = v2
+	local note = UI.note
+	local str = ("Locked %*"):format(v2.DisplayName)
+	note(str)
+end))
+
+bind(UserInputService.InputBegan:Connect(function(input)
+	if UserInputService:GetFocusedTextBox() or tbl4.flyKey == "None" or input.KeyCode.Name ~= tbl4.flyKey then
+		return
+	end
+	tbl4.fly = not tbl4.fly
+	UI.mirror("fly", tbl4.fly)
+	UI.note(tbl4.fly and "Fly on" or "Fly off")
+end))
+
+bind(UserInputService.JumpRequest:Connect(function()
+	if not tbl4.infJump then
+		return
+	end
+	local v5, v6 = alive(localPlayer)
+
+	if v6 then
+		v6:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
+end))
+
+bind(RunService.Heartbeat:Connect(stick))
+
+bind(RunService.Heartbeat:Connect(function()
+	pcall(movement)
+end))
+
+bind(RunService.Stepped:Connect(function()
+	pcall(antiAimStep)
+
+	if tbl4.noclip or tbl4.fly or next(Move.clip) then
+		pcall(noclip)
+	end
+end))
+
+bind(RunService.Heartbeat:Connect(function(deltaTime)
+	pcall(fly, deltaTime)
+	pcall(sweepMovers)
+	pcall(antiAimBeat)
+end))
+
+watchMovers(localPlayer.Character)
+bind(localPlayer.CharacterAdded:Connect(watchMovers))
+spin("Hitbox", 0.3, hitboxes)
+spin("Dodge", 0.05, dodge)
+spin("Crowd", 0.25, crowd)
+
+spin("Skills", 0.1, function()
+	if tbl4.autoSkill then
+		return skills()
+	end
+end)
+
+spin("Gun", function()
+	return tbl4.autoGun and tbl4.gunRate or 0.3
+end, function()
+	if not tbl4.autoGun then
+		Gun.note = "Off"
+		return
+	end
+	local v5
+	v5, v5 = shoot()
+	Gun.note = v5
+end)
+
+spin("Escape", 0.1, escape)
+RunService:BindToRenderStep("NightPvpAim", Enum.RenderPriority.Camera.Value + 1, frame)
+
+spin("Aura", function()
+	return tbl4.aura and tbl4.auraRate or 0.3
+end, function()
+	if not tbl4.aura then
+		Aura.note = "Off"
+		return
+	end
+	local v5
+	v5, v5 = swing()
+	Aura.note = v5
+end)
+
+spin("Buso", 2, function()
+	if tbl4.buso then
+		return buso()
+	end
+end)
+
+spin("Ken", 10, function()
+	if tbl4.ken then
+		return ken()
+	end
+end)
+
+spin("Race", 5, function()
+	if tbl4.race then
+		return race()
+	end
+end)
+
+spin("Panels", 0.5, function()
+	UI.post("target", tgtText())
+	local post = UI.post
+	local str = ("Swings %*  |  %*"):format(Aura.swings, Aura.note)
+	post("aura", str)
+	local post2 = UI.post
+	local str2 = ("Shots %*  |  %*"):format(Gun.shots, Gun.note)
+	post2("gun", str2)
+	UI.post("fly", Fly.note)
+end)
+
+if tbl4.antiAfk then
+	antiAfk()
+end
+
+genv.NightPvp = { Hub = tbl, State = tbl4, Aura = Aura, Esp = Esp, Unload = unload }
+local note = UI.note
+local str = ("Ready - %* build %*"):format(tbl.Game, tbl.Build)
+note(str)
