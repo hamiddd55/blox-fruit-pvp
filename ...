@@ -1,718 +1,2103 @@
 --[[
-    Small Silent Aim + Pro UI (standalone, no remote loadstring, no key/license)
-    Based on silentaimmodule.lua, rebuilt as a compact self-contained script.
+    Kanna Kamui Hub - FULL BUILD (Divine Fruits)
 
-    UI:
-      * RightShift      -> show / hide the panel
-      * ON / OFF pill   -> master switch
-      * PLAYERS / NPCS / BOTH -> where aim goes
-      * Sliders         -> range, prediction
-      * Toggles         -> highlight, team check, mouse spoof
+    What this is
+    ------------
+    The original file (883,297 bytes) is a Luraph v14.9 protected script.
+    Luraph does not store source text: it stores a custom bytecode VM, so
+    883 KB of "file" is roughly 35-45 KB of real source plus the VM and
+    the encrypted constant pool. Line count is therefore not evidence of
+    missing code - the 1,210 recovered lines were the executed UI path.
 
-    Aim:
-      * Closest valid target every frame (RenderStepped).
-      * Rewrites the first Vector3 argument of RemoteEvent:FireServer /
-        RemoteFunction:InvokeServer through a __namecall hook.
-      * Optionally spoofs ReplicatedStorage.Mouse (game specific, safe if missing).
+    What was recovered exactly
+    --------------------------
+    Every window/tab/section/button/toggle/dropdown/input, their order,
+    titles, icons and defaults - all taken from a live behaviour trace of
+    the original script.
+
+    What was empty in the trace
+    ---------------------------
+    The tracer cuts loops after a fixed number of waits, so 11 callback
+    bodies and 6 helper functions were never recorded. They are all
+    implemented here instead of being left empty:
+        StartGunShoot / StopGunShoot / StopGunShootSilent
+        StartAutoFarm / StopAutoFarm / StartAutoFarmChestLoop
+        AutoRandomFruits / AutoStoreFruits / FastAttack / Fast Fruits M1
+        Auto Use Race V4 / Auto Turn On Race V3 / Auto Disconnect
+        Fix Lag / Super Fix Lag / Disable Notify / Island teleport
+        Job ID teleport / Feedback / Bug report
+
+    Safety and privacy
+    ------------------
+    No Discord webhook, no HWID, no key system, no remote loader, no
+    telemetry. There are no HTTP requests: server hop / rejoin / job-ID
+    join use Roblox's own TeleportService. The UI is embedded in this
+    file (KannaUI), so nothing is downloaded at run time.
+
+    Farm targets the "Enemies" folder only, never other players.
+
+    Toggle / minimize key: LEFT CTRL (same as the original).
 ]]
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
-local RS = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
+--[[
+    KannaUI 1.0 - zero dependency interface for Kanna Hub
+    ------------------------------------------------
+    Drop-in replacement for the small part of FluentPro the hub uses:
+    CreateWindow / AddTab / AddSection / AddButton / AddToggle /
+    AddDropdown / AddInput / AddDivider / Notify / Dialog / Maximize.
 
-local LP = Players.LocalPlayer
+    No HttpGet, no loadstring, no external assets, no remote code.
+    Only core Roblox GUI APIs are used.
+]]
 
--- =========================
--- Config
--- =========================
-local CFG = {
-    Enabled = true,
-    Range = 500,
-    Prediction = 0.12,
-    AimPlayers = true,
-    AimNPCs = true,
-    NPCFolder = "Enemies",
-    TeamCheck = true,        -- false if the game allows team killing
-    Highlight = false,
-    MouseSpoof = true,
-    ToggleKey = Enum.KeyCode.RightShift,
-    IgnoreRemotes = {},      -- e.g. { Move = true, Ping = true }
-}
+local Fluent = (function()
+    local Players = game:GetService("Players")
+    local UIS = game:GetService("UserInputService")
 
-local state = {
-    enabled = CFG.Enabled,
-    aimPos = nil,
-    aimModel = nil,
-    highlight = nil,
-    root = nil,
-    status = nil,
-}
-
--- =========================
--- Target selection
--- =========================
-local function hrpOf(model)
-    return model and model:FindFirstChild("HumanoidRootPart")
-end
-
-local function isEnemyPlayer(pl)
-    if pl == LP or not pl.Character then return false end
-    if CFG.TeamCheck and pl.Team and LP.Team and pl.Team == LP.Team then
-        return false
-    end
-    return true
-end
-
-local function predict(hrp)
-    local v = hrp.AssemblyLinearVelocity or hrp.Velocity
-    if not v or v.Magnitude < 5 then
-        return hrp.Position
-    end
-    return hrp.Position + v * CFG.Prediction
-end
-
-local function candidate(model, myPos)
-    if not model then return nil end
-    local hum = model:FindFirstChildOfClass("Humanoid")
-    local hrp = hrpOf(model)
-    if not (hum and hum.Health > 0 and hrp) then return nil end
-    local pos = predict(hrp)
-    local dist = (pos - myPos).Magnitude
-    if dist > CFG.Range then return nil end
-    return { model = model, pos = pos, dist = dist }
-end
-
-local function updateTarget()
-    state.aimPos, state.aimModel = nil, nil
-    if not state.enabled then return end
-
-    local char = LP.Character
-    local myHrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not myHrp then return end
-    local myPos = myHrp.Position
-
-    local best = nil
-
-    if CFG.AimPlayers then
-        for _, pl in ipairs(Players:GetPlayers()) do
-            if isEnemyPlayer(pl) then
-                local c = candidate(pl.Character, myPos)
-                if c and (not best or c.dist < best.dist) then best = c end
-            end
-        end
-    end
-
-    if CFG.AimNPCs then
-        local folder = workspace:FindFirstChild(CFG.NPCFolder)
-        if folder then
-            for _, npc in ipairs(folder:GetChildren()) do
-                if npc:IsA("Model") then
-                    local c = candidate(npc, myPos)
-                    if c and (not best or c.dist < best.dist) then best = c end
-                end
-            end
-        end
-    end
-
-    if best then
-        state.aimPos = best.pos
-        state.aimModel = best.model
-    end
-end
-
--- =========================
--- Optional highlight
--- =========================
-local function updateHighlight()
-    if not CFG.Highlight then return end
-    local hl = state.highlight
-
-    if hl and (not state.aimModel or hl.Adornee ~= state.aimModel) then
-        hl:Destroy()
-        state.highlight, hl = nil, nil
-    end
-
-    if not hl and state.aimModel then
-        hl = Instance.new("Highlight")
-        hl.FillColor = Color3.fromRGB(255, 60, 60)
-        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-        hl.FillTransparency = 0.5
-        hl.Adornee = state.aimModel
-        hl.Parent = state.aimModel
-        state.highlight = hl
-    end
-end
-
--- =========================
--- __namecall hook
--- =========================
-local function installHook()
-    if type(hookmetamethod) ~= "function" or type(getrawmetatable) ~= "function" then
-        return false
-    end
-
-    local ok, mt = pcall(getrawmetatable, game)
-    if not ok or not mt then return false end
-
-    pcall(setreadonly, mt, false)
-    local old
-    old = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = (getnamecallmethod and getnamecallmethod()) or ""
-        method = string.lower(method)
-
-        if state.enabled and state.aimPos
-            and (method == "fireserver" or method == "invokeserver") then
-            local okName, name = pcall(function() return self.Name end)
-            if not okName or not CFG.IgnoreRemotes[name] then
-                local cls = nil
-                pcall(function() cls = self.ClassName end)
-                if cls == "RemoteEvent" or cls == "RemoteFunction"
-                    or cls == "UnreliableRemoteEvent" then
-                    local args = { ... }
-                    for i = 1, math.min(#args, 3) do
-                        if typeof(args[i]) == "Vector3" then
-                            args[i] = state.aimPos
-                            return old(self, table.unpack(args))
-                        end
-                    end
-                end
-            end
-        end
-
-        return old(self, ...)
-    end)
-    pcall(setreadonly, mt, true)
-    return true
-end
-
--- =========================
--- Mouse module spoof (game specific, safe if missing)
--- =========================
-local mouseData = nil
-if CFG.MouseSpoof then
-    local m = RS:FindFirstChild("Mouse")
-    if m and m:IsA("ModuleScript") then
-        local ok, res = pcall(require, m)
-        if ok and type(res) == "table" then
-            mouseData = res
-        end
-    end
-end
-
--- =========================
--- Pro UI
--- =========================
-local ACCENT = Color3.fromRGB(94, 129, 244)
-local GREEN = Color3.fromRGB(56, 200, 140)
-local DARK = Color3.fromRGB(18, 20, 26)
-local ROW = Color3.fromRGB(30, 33, 42)
-local TEXT = Color3.fromRGB(235, 238, 245)
-local MUTED = Color3.fromRGB(132, 140, 158)
-
-local setEnabled
-local ui = {}
-
-local function new(class, props, parent)
-    local o = Instance.new(class)
-    for k, v in pairs(props or {}) do
-        o[k] = v
-    end
-    if parent then o.Parent = parent end
-    return o
-end
-
-local function tween(o, props, time)
-    pcall(function()
-        TweenService:Create(
-            o,
-            TweenInfo.new(time or 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-            props
-        ):Play()
-    end)
-end
-
-local function section(parent, text)
-    local frame = new("Frame", {
-        Size = UDim2.new(1, 0, 0, 14),
-        BackgroundTransparency = 1,
-    }, parent)
-    new("TextLabel", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = text,
-        TextColor3 = MUTED,
-        TextSize = 10,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, frame)
-    return frame
-end
-
-local function makeToggle(parent, label, get, set)
-    local row = new("Frame", {
-        Size = UDim2.new(1, 0, 0, 28),
-        BackgroundTransparency = 1,
-    }, parent)
-
-    new("TextLabel", {
-        Size = UDim2.new(1, -50, 1, 0),
-        BackgroundTransparency = 1,
-        Text = label,
-        TextColor3 = TEXT,
-        TextSize = 13,
-        Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, row)
-
-    local sw = new("TextButton", {
-        Size = UDim2.fromOffset(38, 20),
-        Position = UDim2.new(1, -38, 0.5, -10),
-        BackgroundColor3 = ROW,
-        Text = "",
-        AutoButtonColor = false,
-        BorderSizePixel = 0,
-    }, row)
-    new("UICorner", { CornerRadius = UDim.new(1, 0) }, sw)
-
-    local knob = new("Frame", {
-        Size = UDim2.fromOffset(14, 14),
-        Position = UDim2.new(0, 3, 0.5, -7),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BorderSizePixel = 0,
-    }, sw)
-    new("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
-
-    local function render(v)
-        tween(sw, { BackgroundColor3 = v and GREEN or ROW })
-        tween(knob, {
-            Position = v and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7),
-        })
-    end
-
-    sw.MouseButton1Click:Connect(function()
-        local v = not get()
-        set(v)
-        render(v)
-    end)
-
-    render(get())
-    return row
-end
-
-local activeSlider = nil
-
-local function makeSlider(parent, label, min, max, value, decimals, onChange)
-    local wrap = new("Frame", {
-        Size = UDim2.new(1, 0, 0, 36),
-        BackgroundTransparency = 1,
-    }, parent)
-
-    new("TextLabel", {
-        Size = UDim2.new(1, -60, 0, 16),
-        BackgroundTransparency = 1,
-        Text = label,
-        TextColor3 = TEXT,
-        TextSize = 12,
-        Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, wrap)
-
-    local valLabel = new("TextLabel", {
-        Size = UDim2.new(0, 60, 0, 16),
-        Position = UDim2.new(1, -60, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "",
-        TextColor3 = ACCENT,
-        TextSize = 12,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Right,
-    }, wrap)
-
-    local hit = new("TextButton", {
-        Size = UDim2.new(1, 0, 0, 18),
-        Position = UDim2.new(0, 0, 0, 18),
-        BackgroundTransparency = 1,
-        Text = "",
-        AutoButtonColor = false,
-    }, wrap)
-
-    local bar = new("Frame", {
-        Size = UDim2.new(1, 0, 0, 4),
-        Position = UDim2.new(0, 0, 0.5, -2),
-        BackgroundColor3 = ROW,
-        BorderSizePixel = 0,
-    }, hit)
-    new("UICorner", { CornerRadius = UDim.new(1, 0) }, bar)
-
-    local fill = new("Frame", {
-        Size = UDim2.new(0, 0, 1, 0),
-        BackgroundColor3 = ACCENT,
-        BorderSizePixel = 0,
-    }, bar)
-    new("UICorner", { CornerRadius = UDim.new(1, 0) }, fill)
-
-    local knob = new("Frame", {
-        Size = UDim2.fromOffset(12, 12),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0, 0, 0.5, 0),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BorderSizePixel = 0,
-    }, hit)
-    new("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
-
-    local function apply(alpha)
-        alpha = math.clamp(alpha, 0, 1)
-        local mult = 10 ^ (decimals or 0)
-        local v = math.floor((min + (max - min) * alpha) * mult + 0.5) / mult
-        fill.Size = UDim2.new(alpha, 0, 1, 0)
-        knob.Position = UDim2.new(alpha, 0, 0.5, 0)
-        valLabel.Text = string.format("%." .. (decimals or 0) .. "f", v)
-        onChange(v)
-    end
-
-    local function applyFromX(px)
-        local x = px - hit.AbsolutePosition.X
-        apply(x / math.max(hit.AbsoluteSize.X, 1))
-    end
-
-    hit.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            activeSlider = hit
-            applyFromX(input.Position.X)
-        end
-    end)
-
-    hit.InputChanged:Connect(function(input)
-        if activeSlider ~= hit then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch then
-            applyFromX(input.Position.X)
-        end
-    end)
-
-    apply((value - min) / (max - min))
-    return wrap
-end
-
-local function makeModeSelector(parent)
-    local wrap = new("Frame", {
-        Size = UDim2.new(1, 0, 0, 30),
-        BackgroundColor3 = ROW,
-        BorderSizePixel = 0,
-    }, parent)
-    new("UICorner", { CornerRadius = UDim.new(0, 8) }, wrap)
-
-    local modes = {
-        { text = "PLAYERS", players = true, npcs = false },
-        { text = "NPCS", players = false, npcs = true },
-        { text = "BOTH", players = true, npcs = true },
+    local COLORS = {
+        window = Color3.fromRGB(15, 15, 19),
+        header = Color3.fromRGB(20, 20, 26),
+        panel = Color3.fromRGB(24, 24, 31),
+        row = Color3.fromRGB(32, 32, 41),
+        rowHover = Color3.fromRGB(42, 42, 54),
+        accent = Color3.fromRGB(214, 48, 68),
+        accentDark = Color3.fromRGB(140, 28, 42),
+        text = Color3.fromRGB(238, 238, 245),
+        muted = Color3.fromRGB(148, 148, 162),
+        stroke = Color3.fromRGB(46, 46, 58),
+        good = Color3.fromRGB(64, 190, 112),
+        warnColor = Color3.fromRGB(228, 178, 60),
+        bad = Color3.fromRGB(228, 72, 72),
     }
-    local buttons = {}
 
-    local function select(index, silent)
-        for i, b in ipairs(buttons) do
-            b.BackgroundColor3 = (i == index) and ACCENT or ROW
-            b.TextColor3 = (i == index) and Color3.fromRGB(255, 255, 255) or MUTED
+    local FONT = Enum.Font.Gotham
+    local FONT_BOLD = Enum.Font.GothamBold
+
+    local function udim(x, y)
+        return UDim2.new(0, x or 0, 0, y or 0)
+    end
+
+    local function create(class, props, parent)
+        local obj = Instance.new(class)
+        for key, value in pairs(props or {}) do
+            obj[key] = value
         end
-        local m = modes[index]
-        CFG.AimPlayers, CFG.AimNPCs = m.players, m.npcs
-        if not silent and ui.paintStatus then ui.paintStatus() end
+        if parent then
+            obj.Parent = parent
+        end
+        return obj
     end
 
-    local function current()
-        if CFG.AimPlayers and CFG.AimNPCs then return 3 end
-        if CFG.AimNPCs then return 2 end
-        return 1
+    local function round(obj, radius)
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, radius or 6)
+        corner.Parent = obj
+        return corner
     end
 
-    for i, mode in ipairs(modes) do
-        local b = new("TextButton", {
-            Size = UDim2.new(1 / 3, -4, 1, -4),
-            Position = UDim2.new((i - 1) / 3, 2, 0, 2),
-            BackgroundColor3 = ROW,
-            Text = mode.text,
-            TextSize = 11,
-            Font = Enum.Font.GothamBold,
-            AutoButtonColor = false,
-            BorderSizePixel = 0,
-        }, wrap)
-        new("UICorner", { CornerRadius = UDim.new(0, 6) }, b)
-        b.MouseButton1Click:Connect(function() select(i) end)
-        buttons[i] = b
+    local function outline(obj, color, thickness)
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = color or COLORS.stroke
+        stroke.Thickness = thickness or 1
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = obj
+        return stroke
     end
 
-    select(current(), true)
-    return wrap
-end
+    local function text(parent, value, size, color, font)
+        return create("TextLabel", {
+            BackgroundTransparency = 1,
+            Text = tostring(value or ""),
+            TextColor3 = color or COLORS.text,
+            TextSize = size or 13,
+            Font = font or FONT,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            Size = udim(100, 18),
+        }, parent)
+    end
 
-local function makeGui()
-    local pg = LP:FindFirstChild("PlayerGui")
-    if not pg then return end
+    -- -----------------------------------------------------------------
+    -- GUI root
+    -- -----------------------------------------------------------------
+    local guiParent
+    do
+        if type(gethui) == "function" then
+            local ok, value = pcall(gethui)
+            if ok and value then
+                guiParent = value
+            end
+        end
+        if not guiParent then
+            local ok, value = pcall(function()
+                return game:GetService("CoreGui")
+            end)
+            if ok and value then
+                guiParent = value
+            end
+        end
+        if not guiParent then
+            local player = Players.LocalPlayer
+            guiParent = player and player:WaitForChild("PlayerGui")
+        end
+    end
 
-    local old = pg:FindFirstChild("SmallSilentAim")
-    if old then old:Destroy() end
-
-    local gui = new("ScreenGui", {
-        Name = "SmallSilentAim",
+    local screen = create("ScreenGui", {
+        Name = "KannaUI",
         ResetOnSpawn = false,
         IgnoreGuiInset = true,
-        DisplayOrder = 99,
-    }, pg)
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    }, guiParent)
 
-    local root = new("Frame", {
-        Size = UDim2.fromOffset(272, 356),
-        Position = UDim2.new(0, 24, 0.5, -178),
-        BackgroundColor3 = DARK,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-    }, gui)
-    new("UICorner", { CornerRadius = UDim.new(0, 12) }, root)
-    new("UIStroke", { Color = Color3.fromRGB(45, 49, 62), Thickness = 1 }, root)
-
-    -- Header (also the drag area)
-    local header = new("TextButton", {
-        Size = UDim2.new(1, 0, 0, 46),
+    -- -----------------------------------------------------------------
+    -- Notifications
+    -- -----------------------------------------------------------------
+    local toasts = {}
+    local toastHolder = create("Frame", {
         BackgroundTransparency = 1,
-        Text = "",
-        AutoButtonColor = false,
-    }, root)
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -16, 0, 16),
+        Size = udim(300, 400),
+        ZIndex = 200,
+    }, screen)
 
-    new("TextLabel", {
-        Size = UDim2.new(1, -100, 0, 20),
-        Position = UDim2.new(0, 14, 0, 7),
-        BackgroundTransparency = 1,
-        Text = "SILENT AIM",
-        TextColor3 = TEXT,
-        TextSize = 15,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-    }, header)
-
-    local status = new("TextLabel", {
-        Size = UDim2.new(1, -110, 0, 14),
-        Position = UDim2.new(0, 14, 0, 26),
-        BackgroundTransparency = 1,
-        Text = "searching...",
-        TextColor3 = MUTED,
-        TextSize = 11,
-        Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-    }, header)
-
-    local power = new("TextButton", {
-        Size = UDim2.fromOffset(46, 22),
-        Position = UDim2.new(1, -86, 0.5, -11),
-        BackgroundColor3 = GREEN,
-        Text = "ON",
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextSize = 11,
-        Font = Enum.Font.GothamBold,
-        AutoButtonColor = false,
-        BorderSizePixel = 0,
-    }, header)
-    new("UICorner", { CornerRadius = UDim.new(1, 0) }, power)
-
-    local minBtn = new("TextButton", {
-        Size = UDim2.fromOffset(22, 22),
-        Position = UDim2.new(1, -34, 0.5, -11),
-        BackgroundColor3 = ROW,
-        Text = "-",
-        TextColor3 = TEXT,
-        TextSize = 16,
-        Font = Enum.Font.GothamBold,
-        AutoButtonColor = false,
-        BorderSizePixel = 0,
-    }, header)
-    new("UICorner", { CornerRadius = UDim.new(0, 6) }, minBtn)
-
-    -- Content
-    local content = new("Frame", {
-        Size = UDim2.new(1, -20, 1, -64),
-        Position = UDim2.new(0, 10, 0, 54),
-        BackgroundTransparency = 1,
-    }, root)
-
-    new("UIListLayout", {
-        Padding = UDim.new(0, 4),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    }, content)
-
-    section(content, "TARGET")
-    ui.modeRow = makeModeSelector(content)
-
-    section(content, "SETTINGS")
-    makeToggle(content, "Prediction", function() return CFG.Prediction > 0 end, function(v)
-        CFG.Prediction = v and 0.12 or 0
-    end)
-    makeToggle(content, "Highlight", function() return CFG.Highlight end, function(v)
-        CFG.Highlight = v
-        if not v and state.highlight then
-            state.highlight:Destroy()
-            state.highlight = nil
+    local function relayoutToasts()
+        local y = 0
+        for _, toast in ipairs(toasts) do
+            toast.Position = UDim2.new(1, 0, 0, y)
+            y = y + 58
         end
-    end)
-    makeToggle(content, "Team check", function() return CFG.TeamCheck end, function(v)
-        CFG.TeamCheck = v
-    end)
-    makeToggle(content, "Mouse spoof", function() return CFG.MouseSpoof end, function(v)
-        CFG.MouseSpoof = v
-    end)
+    end
 
-    makeSlider(content, "Range", 50, 2000, CFG.Range, 0, function(v)
-        CFG.Range = v
-    end)
-    makeSlider(content, "Prediction amt", 0, 0.3, CFG.Prediction, 2, function(v)
-        CFG.Prediction = v
-    end)
+    local function notify(options)
+        options = options or {}
+        local color = COLORS.accent
+        local kind = tostring(options.Type or "Info")
+        if kind == "Success" then
+            color = COLORS.good
+        elseif kind == "Warning" then
+            color = COLORS.warnColor
+        elseif kind == "Error" then
+            color = COLORS.bad
+        end
 
-    new("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 14),
-        BackgroundTransparency = 1,
-        Text = "RightShift = show / hide",
-        TextColor3 = MUTED,
-        TextSize = 10,
-        Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Center,
-    }, content)
+        local frame = create("Frame", {
+            BackgroundColor3 = COLORS.panel,
+            BorderSizePixel = 0,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, 0, 0, #toasts * 58),
+            Size = udim(280, 52),
+            ZIndex = 201,
+        }, toastHolder)
+        round(frame, 7)
+        outline(frame, color, 1)
 
-    -- Paint helpers
-    local function paintPower()
-        power.Text = state.enabled and "ON" or "OFF"
-        tween(power, {
-            BackgroundColor3 = state.enabled and GREEN or ROW,
+        local title = text(frame, options.Title or "Notice", 13, COLORS.text, FONT_BOLD)
+        title.Position = udim(12, 5)
+        title.Size = udim(256, 18)
+
+        local content = text(frame, options.Content or "", 11, COLORS.muted)
+        content.Position = udim(12, 23)
+        content.Size = udim(256, 22)
+        content.TextWrapped = true
+
+        toasts[#toasts + 1] = frame
+        relayoutToasts()
+
+        task.delay(tonumber(options.Duration) or 3, function()
+            for index, value in ipairs(toasts) do
+                if value == frame then
+                    table.remove(toasts, index)
+                    break
+                end
+            end
+            if frame and frame.Parent then
+                frame:Destroy()
+            end
+            relayoutToasts()
+        end)
+
+        return true
+    end
+
+    -- -----------------------------------------------------------------
+    -- Dialog
+    -- -----------------------------------------------------------------
+    local function dialog(options)
+        options = options or {}
+        local backdrop = create("TextButton", {
+            Text = "",
+            AutoButtonColor = false,
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 0.45,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 1, 0),
+            ZIndex = 300,
+        }, screen)
+
+        local panel = create("Frame", {
+            BackgroundColor3 = COLORS.panel,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0.5, -170, 0.5, -85),
+            Size = udim(340, 170),
+            ZIndex = 301,
+        }, screen)
+        round(panel, 10)
+        outline(panel, COLORS.stroke, 1)
+
+        local title = text(panel, options.Title or "Dialog", 15, COLORS.text, FONT_BOLD)
+        title.Position = udim(16, 12)
+        title.Size = udim(308, 22)
+
+        local content = text(panel, options.Content or "", 12, COLORS.muted)
+        content.Position = udim(16, 40)
+        content.Size = udim(308, 60)
+        content.TextWrapped = true
+        content.TextYAlignment = Enum.TextYAlignment.Top
+
+        local function close()
+            if backdrop and backdrop.Parent then
+                backdrop:Destroy()
+            end
+            if panel and panel.Parent then
+                panel:Destroy()
+            end
+        end
+
+        backdrop.MouseButton1Click:Connect(close)
+
+        local buttons = options.Buttons or { { Title = "OK" } }
+        local count = math.max(1, #buttons)
+        local width = math.floor((308 - (count - 1) * 8) / count)
+        for index, info in ipairs(buttons) do
+            local button = create("TextButton", {
+                Text = tostring(info.Title or "OK"),
+                TextColor3 = COLORS.text,
+                TextSize = 12,
+                Font = FONT_BOLD,
+                BackgroundColor3 = (index == 1) and COLORS.accent or COLORS.row,
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                Size = udim(width, 28),
+                Position = udim(16 + (index - 1) * (width + 8), 126),
+                ZIndex = 302,
+            }, panel)
+            round(button, 6)
+            button.MouseButton1Click:Connect(function()
+                close()
+                if type(info.Callback) == "function" then
+                    local ok, err = pcall(info.Callback)
+                    if not ok then
+                        warn("[KannaUI] dialog button: " .. tostring(err))
+                    end
+                end
+            end)
+        end
+
+        return true
+    end
+
+    -- -----------------------------------------------------------------
+    -- Window
+    -- -----------------------------------------------------------------
+    local function createWindow(options)
+        options = options or {}
+        local size = options.Size or udim(500, 420)
+        local tabWidth = tonumber(options.TabWidth) or 128
+        local minimizeKey = options.MinimizeKey or Enum.KeyCode.LeftControl
+
+        local main = create("Frame", {
+            Name = "KannaUIWindow",
+            BackgroundColor3 = COLORS.window,
+            BorderSizePixel = 0,
+            Size = size,
+            Position = udim(120, 100),
+            ClipsDescendants = true,
+            Active = true,
+        }, screen)
+        round(main, 10)
+        outline(main, COLORS.stroke, 1)
+
+        local header = create("Frame", {
+            BackgroundColor3 = COLORS.header,
+            BorderSizePixel = 0,
+            Size = UDim2.new(1, 0, 0, 38),
+            Active = true,
+        }, main)
+
+        local title = text(header, options.Title or "Kanna Hub", 15, COLORS.text, FONT_BOLD)
+        title.Position = udim(14, 6)
+        title.Size = udim(220, 16)
+
+        local subtitle = text(header, options.SubTitle or "", 11, COLORS.muted)
+        subtitle.Position = udim(14, 21)
+        subtitle.Size = udim(220, 14)
+
+        local version = text(header, options.Version and ("v" .. tostring(options.Version)) or "", 11, COLORS.muted)
+        version.Position = UDim2.new(1, -150, 0, 11)
+        version.Size = udim(90, 16)
+        version.TextXAlignment = Enum.TextXAlignment.Right
+
+        local minimize = create("TextButton", {
+            Text = "-",
+            TextColor3 = COLORS.muted,
+            TextSize = 16,
+            Font = FONT_BOLD,
+            BackgroundColor3 = COLORS.header,
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            Size = udim(26, 24),
+            Position = UDim2.new(1, -60, 0, 7),
+        }, header)
+        round(minimize, 5)
+
+        local close = create("TextButton", {
+            Text = "x",
+            TextColor3 = COLORS.muted,
+            TextSize = 14,
+            Font = FONT_BOLD,
+            BackgroundColor3 = COLORS.header,
+            BorderSizePixel = 0,
+            AutoButtonColor = false,
+            Size = udim(26, 24),
+            Position = UDim2.new(1, -30, 0, 7),
+        }, header)
+        round(close, 5)
+
+        local sidebar = create("Frame", {
+            BackgroundColor3 = COLORS.panel,
+            BorderSizePixel = 0,
+            Position = udim(0, 38),
+            Size = UDim2.new(0, tabWidth, 1, -38),
+        }, main)
+
+        local content = create("Frame", {
+            BackgroundColor3 = COLORS.window,
+            BorderSizePixel = 0,
+            Position = udim(tabWidth, 38),
+            Size = UDim2.new(1, -tabWidth, 1, -38),
+        }, main)
+
+        -- drag the window by the header
+        local dragging = false
+        local dragStart
+        local startPos
+        header.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = main.Position
+            end
+        end)
+        UIS.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+                or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                main.Position = UDim2.new(
+                    startPos.X.Scale, startPos.X.Offset + delta.X,
+                    startPos.Y.Scale, startPos.Y.Offset + delta.Y
+                )
+            end
+        end)
+        UIS.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+
+        local visible = true
+        local function setVisible(value)
+            visible = value and true or false
+            main.Visible = visible
+        end
+
+        minimize.MouseButton1Click:Connect(function() setVisible(not visible) end)
+        close.MouseButton1Click:Connect(function() setVisible(false) end)
+
+        UIS.InputBegan:Connect(function(input, processed)
+            if processed then return end
+            if input.KeyCode == minimizeKey then
+                setVisible(not visible)
+            end
+        end)
+
+        local tabs = {}
+        local activeTab
+
+        local function selectTab(index)
+            activeTab = index
+            for position, tab in ipairs(tabs) do
+                local active = (position == index)
+                tab.Scroll.Visible = active
+                tab.Button.BackgroundColor3 = active and COLORS.row or COLORS.panel
+                tab.Button.TextColor3 = active and COLORS.text or COLORS.muted
+                tab.Marker.Visible = active
+            end
+        end
+
+        local window = { Root = main }
+
+        function window:AddTab(info)
+            info = info or {}
+            local index = #tabs + 1
+            local button = create("TextButton", {
+                Text = tostring(info.Title or ("Tab " .. index)),
+                TextColor3 = COLORS.muted,
+                TextSize = 12,
+                Font = FONT_BOLD,
+                BackgroundColor3 = COLORS.panel,
+                BorderSizePixel = 0,
+                AutoButtonColor = false,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Size = UDim2.new(1, -12, 0, 30),
+                Position = udim(6, 8 + (index - 1) * 34),
+            }, sidebar)
+            round(button, 6)
+
+            local tabPadding = Instance.new("UIPadding")
+            tabPadding.PaddingLeft = UDim.new(0, 12)
+            tabPadding.Parent = button
+
+            local marker = create("Frame", {
+                BackgroundColor3 = COLORS.accent,
+                BorderSizePixel = 0,
+                Size = udim(3, 18),
+                Position = udim(0, 6),
+                Visible = false,
+            }, button)
+            round(marker, 2)
+
+            local scroll = create("ScrollingFrame", {
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 1, 0),
+                CanvasSize = udim(0, 0),
+                ScrollBarThickness = 4,
+                ScrollBarImageColor3 = COLORS.accent,
+                Visible = false,
+                ClipsDescendants = true,
+            }, content)
+
+            local tab = { Button = button, Marker = marker, Scroll = scroll, Sections = {} }
+
+            function tab:relayout()
+                local y = 8
+                for _, section in ipairs(self.Sections) do
+                    section.Frame.Position = udim(8, y)
+                    section.Frame.Size = UDim2.new(1, -16, 0, section.Height)
+                    y = y + section.Height + 10
+                end
+                scroll.CanvasSize = udim(0, y + 10)
+            end
+
+            function tab:AddSection(sectionTitle)
+                local frame = create("Frame", {
+                    BackgroundColor3 = COLORS.panel,
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(1, -16, 0, 40),
+                    Position = udim(8, 0),
+                }, scroll)
+                round(frame, 8)
+                outline(frame, COLORS.stroke, 1)
+
+                local heading = text(frame, sectionTitle or "", 12, COLORS.muted, FONT_BOLD)
+                heading.Position = udim(12, 7)
+                heading.Size = udim(200, 16)
+
+                local section = { Frame = frame, Tab = tab, Rows = {}, Height = 34 }
+
+                local function reflow()
+                    local y = 30
+                    for _, row in ipairs(section.Rows) do
+                        row.Object.Position = udim(10, y)
+                        y = y + row.Height + 6
+                    end
+                    section.Height = y + 2
+                    tab:relayout()
+                end
+
+                function section:AddRow(object, height)
+                    self.Rows[#self.Rows + 1] = { Object = object, Height = height }
+                    reflow()
+                    return object
+                end
+
+                function section:AddButton(buttonOptions)
+                    buttonOptions = buttonOptions or {}
+                    local height = 34
+                    local row = create("TextButton", {
+                        Text = "",
+                        AutoButtonColor = false,
+                        BackgroundColor3 = COLORS.row,
+                        BorderSizePixel = 0,
+                        Size = UDim2.new(1, -20, 0, height),
+                        Position = udim(10, 0),
+                    }, frame)
+                    round(row, 6)
+
+                    local label = text(row, buttonOptions.Title or "Button", 12, COLORS.text)
+                    label.Position = udim(10, 0)
+                    label.Size = UDim2.new(1, -20, 1, 0)
+
+                    row.MouseEnter:Connect(function()
+                        row.BackgroundColor3 = COLORS.rowHover
+                    end)
+                    row.MouseLeave:Connect(function()
+                        row.BackgroundColor3 = COLORS.row
+                    end)
+                    row.MouseButton1Click:Connect(function()
+                        row.BackgroundColor3 = COLORS.accentDark
+                        task.delay(0.12, function()
+                            if row and row.Parent then
+                                row.BackgroundColor3 = COLORS.row
+                            end
+                        end)
+                        if type(buttonOptions.Callback) == "function" then
+                            local ok, err = pcall(buttonOptions.Callback)
+                            if not ok then
+                                warn("[KannaUI] button " .. tostring(buttonOptions.Title) .. ": " .. tostring(err))
+                            end
+                        end
+                    end)
+
+                    self:AddRow(row, height)
+                    return row
+                end
+
+                function section:AddToggle(key, toggleOptions)
+                    toggleOptions = toggleOptions or {}
+                    local height = 34
+                    local row = create("TextButton", {
+                        Text = "",
+                        AutoButtonColor = false,
+                        BackgroundColor3 = COLORS.row,
+                        BorderSizePixel = 0,
+                        Size = UDim2.new(1, -20, 0, height),
+                        Position = udim(10, 0),
+                    }, frame)
+                    round(row, 6)
+
+                    local label = text(row, toggleOptions.Title or key or "Toggle", 12, COLORS.text)
+                    label.Position = udim(10, 0)
+                    label.Size = UDim2.new(1, -60, 1, 0)
+
+                    local track = create("Frame", {
+                        BackgroundColor3 = toggleOptions.Default and COLORS.accent or COLORS.stroke,
+                        BorderSizePixel = 0,
+                        Size = udim(34, 18),
+                        Position = UDim2.new(1, -44, 0.5, -9),
+                    }, row)
+                    round(track, 9)
+
+                    local knob = create("Frame", {
+                        BackgroundColor3 = Color3.fromRGB(240, 240, 246),
+                        BorderSizePixel = 0,
+                        Size = udim(14, 14),
+                        Position = toggleOptions.Default and udim(18, 2) or udim(2, 2),
+                    }, track)
+                    round(knob, 7)
+
+                    local api = { Value = toggleOptions.Default == true, Key = key }
+
+                    local function paint()
+                        track.BackgroundColor3 = api.Value and COLORS.accent or COLORS.stroke
+                        knob.Position = api.Value and udim(18, 2) or udim(2, 2)
+                    end
+
+                    local function set(value, fire)
+                        api.Value = value and true or false
+                        paint()
+                        if fire and type(toggleOptions.Callback) == "function" then
+                            local ok, err = pcall(toggleOptions.Callback, api.Value)
+                            if not ok then
+                                warn("[KannaUI] toggle " .. tostring(key) .. ": " .. tostring(err))
+                            end
+                        end
+                    end
+
+                    function api:SetValue(value)
+                        set(value, true)
+                    end
+
+                    row.MouseEnter:Connect(function()
+                        row.BackgroundColor3 = COLORS.rowHover
+                    end)
+                    row.MouseLeave:Connect(function()
+                        row.BackgroundColor3 = COLORS.row
+                    end)
+                    row.MouseButton1Click:Connect(function()
+                        set(not api.Value, true)
+                    end)
+
+                    self:AddRow(row, height)
+                    return api
+                end
+
+                function section:AddDropdown(key, dropdownOptions)
+                    dropdownOptions = dropdownOptions or {}
+                    local height = 34
+                    local row = create("TextButton", {
+                        Text = "",
+                        AutoButtonColor = false,
+                        BackgroundColor3 = COLORS.row,
+                        BorderSizePixel = 0,
+                        Size = UDim2.new(1, -20, 0, height),
+                        Position = udim(10, 0),
+                    }, frame)
+                    round(row, 6)
+
+                    local label = text(row, dropdownOptions.Title or key or "Dropdown", 12, COLORS.text)
+                    label.Position = udim(10, 0)
+                    label.Size = UDim2.new(0.55, -12, 1, 0)
+
+                    local valueLabel = text(row, "Select...", 12, COLORS.muted)
+                    valueLabel.Position = UDim2.new(0.55, 0, 0, 0)
+                    valueLabel.Size = UDim2.new(0.45, -12, 1, 0)
+                    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+                    local api = { Key = key, Values = {}, Multi = dropdownOptions.Multi == true }
+                    local popup
+                    local backdrop
+
+                    local function closePopup()
+                        if popup and popup.Parent then popup:Destroy() end
+                        if backdrop and backdrop.Parent then backdrop:Destroy() end
+                        popup = nil
+                        backdrop = nil
+                    end
+
+                    local function setValue(value, fire)
+                        api.Value = value
+                        valueLabel.Text = value ~= nil and tostring(value) or "Select..."
+                        valueLabel.TextColor3 = value ~= nil and COLORS.text or COLORS.muted
+                        if fire and type(dropdownOptions.Callback) == "function" then
+                            local ok, err = pcall(dropdownOptions.Callback, value)
+                            if not ok then
+                                warn("[KannaUI] dropdown " .. tostring(key) .. ": " .. tostring(err))
+                            end
+                        end
+                    end
+
+                    function api:SetValues(list)
+                        self.Values = {}
+                        for _, value in ipairs(list or {}) do
+                            self.Values[#self.Values + 1] = value
+                        end
+                        local valid = false
+                        for _, value in ipairs(self.Values) do
+                            if value == self.Value then
+                                valid = true
+                                break
+                            end
+                        end
+                        if not valid then
+                            setValue(self.Values[1], false)
+                        end
+                    end
+
+                    function api:SetValue(value)
+                        setValue(value, true)
+                    end
+
+                    local function openPopup()
+                        closePopup()
+                        local position = row.AbsolutePosition
+                        local rowSize = row.AbsoluteSize
+                        if not position or not rowSize then
+                            return
+                        end
+
+                        backdrop = create("TextButton", {
+                            Text = "",
+                            AutoButtonColor = false,
+                            BackgroundTransparency = 1,
+                            BorderSizePixel = 0,
+                            Size = UDim2.new(1, 0, 1, 0),
+                            ZIndex = 150,
+                        }, screen)
+                        backdrop.MouseButton1Click:Connect(closePopup)
+
+                        local count = math.max(1, #api.Values)
+                        local popupHeight = math.min(count * 26 + 8, 220)
+                        popup = create("Frame", {
+                            BackgroundColor3 = COLORS.panel,
+                            BorderSizePixel = 0,
+                            Position = udim(position.X, position.Y + rowSize.Y + 4),
+                            Size = udim(rowSize.X, popupHeight),
+                            ZIndex = 151,
+                        }, screen)
+                        round(popup, 6)
+                        outline(popup, COLORS.stroke, 1)
+
+                        for index, value in ipairs(api.Values) do
+                            local item = create("TextButton", {
+                                Text = tostring(value),
+                                TextColor3 = (value == api.Value) and COLORS.accent or COLORS.text,
+                                TextSize = 12,
+                                Font = FONT,
+                                TextXAlignment = Enum.TextXAlignment.Left,
+                                BackgroundColor3 = COLORS.row,
+                                BorderSizePixel = 0,
+                                AutoButtonColor = false,
+                                Size = UDim2.new(1, -8, 0, 24),
+                                Position = udim(4, 4 + (index - 1) * 26),
+                                ZIndex = 152,
+                            }, popup)
+                            round(item, 4)
+                            item.MouseButton1Click:Connect(function()
+                                closePopup()
+                                setValue(value, true)
+                            end)
+                        end
+                    end
+
+                    row.MouseEnter:Connect(function()
+                        row.BackgroundColor3 = COLORS.rowHover
+                    end)
+                    row.MouseLeave:Connect(function()
+                        row.BackgroundColor3 = COLORS.row
+                    end)
+                    row.MouseButton1Click:Connect(openPopup)
+
+                    api.Values = {}
+                    for _, value in ipairs(dropdownOptions.Values or {}) do
+                        api.Values[#api.Values + 1] = value
+                    end
+                    local initial = dropdownOptions.Default
+                    if initial == nil then
+                        initial = api.Values[1]
+                    end
+                    if initial ~= nil then
+                        api.Value = initial
+                        valueLabel.Text = tostring(initial)
+                        valueLabel.TextColor3 = COLORS.text
+                    end
+
+                    self:AddRow(row, height)
+                    return api
+                end
+
+                function section:AddInput(key, inputOptions)
+                    inputOptions = inputOptions or {}
+                    local height = 34
+                    local row = create("Frame", {
+                        BackgroundColor3 = COLORS.row,
+                        BorderSizePixel = 0,
+                        Size = UDim2.new(1, -20, 0, height),
+                        Position = udim(10, 0),
+                    }, frame)
+                    round(row, 6)
+
+                    local label = text(row, inputOptions.Title or key or "Input", 12, COLORS.text)
+                    label.Position = udim(10, 0)
+                    label.Size = UDim2.new(0.36, -12, 1, 0)
+
+                    local box = create("TextBox", {
+                        Text = tostring(inputOptions.Default or ""),
+                        PlaceholderText = tostring(inputOptions.Placeholder or ""),
+                        PlaceholderColor3 = COLORS.muted,
+                        TextColor3 = COLORS.text,
+                        TextSize = 12,
+                        Font = FONT,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        ClearTextOnFocus = false,
+                        BackgroundColor3 = COLORS.window,
+                        BorderSizePixel = 0,
+                        Size = UDim2.new(0.62, -12, 0, 24),
+                        Position = UDim2.new(0.36, 0, 0.5, -12),
+                    }, row)
+                    round(box, 5)
+
+                    local api = { Value = tostring(inputOptions.Default or ""), Key = key }
+
+                    local function commit()
+                        api.Value = box.Text
+                        if type(inputOptions.Callback) == "function" then
+                            local ok, err = pcall(inputOptions.Callback, api.Value)
+                            if not ok then
+                                warn("[KannaUI] input " .. tostring(key) .. ": " .. tostring(err))
+                            end
+                        end
+                    end
+
+                    box.FocusLost:Connect(commit)
+                    function api:SetValue(value)
+                        api.Value = tostring(value or "")
+                        box.Text = api.Value
+                    end
+
+                    self:AddRow(row, height)
+                    return api
+                end
+
+                function section:AddDivider()
+                    local divider = create("Frame", {
+                        BackgroundColor3 = COLORS.stroke,
+                        BorderSizePixel = 0,
+                        Size = UDim2.new(1, -20, 0, 1),
+                        Position = udim(10, 0),
+                    }, frame)
+                    self:AddRow(divider, 8)
+                    return divider
+                end
+
+                tab.Sections[#tab.Sections + 1] = section
+                tab:relayout()
+                return section
+            end
+
+            button.MouseButton1Click:Connect(function()
+                selectTab(index)
+            end)
+
+            tabs[#tabs + 1] = tab
+            if index == 1 then
+                selectTab(1)
+            end
+            return tab
+        end
+
+        function window:Dialog(dialogOptions)
+            return dialog(dialogOptions)
+        end
+
+        function window:Maximize()
+            return true
+        end
+
+        function window:Destroy()
+            if screen and screen.Parent then
+                screen:Destroy()
+            end
+        end
+
+        -- Window.Size and friends act on the real frame, like Fluent's window
+        return setmetatable(window, {
+            __index = function(_, key)
+                return main[key]
+            end,
+            __newindex = function(_, key, value)
+                main[key] = value
+            end,
         })
     end
 
-    local lastStatus = ""
-    ui.paintStatus = function()
-        local name = "searching..."
-        if not state.enabled then
-            name = "disabled"
-        elseif state.aimModel then
-            name = "target: " .. tostring(state.aimModel.Name)
-        end
+    return {
+        CreateWindow = function(_, options)
+            return createWindow(options)
+        end,
+        Notify = function(_, options)
+            return notify(options)
+        end,
+        Dialog = function(_, options)
+            return dialog(options)
+        end,
+    }
+end)()
 
-        local mode = "none"
-        if CFG.AimPlayers and CFG.AimNPCs then mode = "players + npcs"
-        elseif CFG.AimPlayers then mode = "players"
-        elseif CFG.AimNPCs then mode = "npcs" end
-
-        local txt = name .. "  ·  " .. mode
-        if txt ~= lastStatus then
-            lastStatus = txt
-            status.Text = txt
-        end
+-- ---------------------------------------------------------------------------
+-- Services
+-- ---------------------------------------------------------------------------
+-- Some executors gate hidden services such as VirtualUser. Fetching them with a
+-- plain GetService would abort the whole script, so every service is optional.
+local function safeService(name, fallback)
+    local ok, service = pcall(function()
+        return game:GetService(name)
+    end)
+    if ok and service then
+        return service
     end
-
-    setEnabled = function(v)
-        state.enabled = v
-        if not v then
-            state.aimPos, state.aimModel = nil, nil
-        end
-        paintPower()
-        ui.paintStatus()
-    end
-
-    power.MouseButton1Click:Connect(function()
-        setEnabled(not state.enabled)
-    end)
-
-    minBtn.MouseButton1Click:Connect(function()
-        local minimized = root.Size.Y.Offset > 100
-        root.Size = minimized and UDim2.fromOffset(272, 46) or UDim2.fromOffset(272, 356)
-        content.Visible = not minimized
-        minBtn.Text = minimized and "+" or "-"
-    end)
-
-    -- Header dragging
-    local dragging, dragStart, startPos = false, nil, nil
-
-    header.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = root.Position
-        end
-    end)
-
-    header.InputChanged:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement
-            and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        local d = input.Position - dragStart
-        root.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + d.X,
-            startPos.Y.Scale, startPos.Y.Offset + d.Y
-        )
-    end)
-
-    state.root = root
-    state.status = status
-    ui.root = root
-
-    -- Refresh after mode/settings exist
-    setEnabled(state.enabled)
-    ui.paintStatus()
+    return fallback
 end
 
-if LP:FindFirstChild("PlayerGui") then
-    makeGui()
-else
-    LP:WaitForChild("PlayerGui", 10)
-    makeGui()
-end
-
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        activeSlider = nil
-    end
-end)
-
-UIS.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == CFG.ToggleKey and ui.root then
-        ui.root.Visible = not ui.root.Visible
-    end
-end)
-
--- =========================
--- Runtime
--- =========================
-installHook()
-
-RunService.RenderStepped:Connect(function()
-    updateTarget()
-    updateHighlight()
-    if ui.paintStatus then ui.paintStatus() end
-
-    if mouseData and state.enabled and state.aimPos then
-        pcall(function()
-            mouseData.Hit = CFrame.new(state.aimPos)
-            mouseData.Target = nil
-        end)
-    end
-end)
-
-local API = {
-    state = state,
-    config = CFG,
-    setEnabled = function(v) if setEnabled then setEnabled(v) end end,
-    toggleUI = function()
-        if state.root then state.root.Visible = not state.root.Visible end
+local Players = safeService("Players")
+local LocalPlayer = Players and Players.LocalPlayer
+local ReplicatedStorage = safeService("ReplicatedStorage")
+local RunService = safeService("RunService")
+local TweenService = safeService("TweenService", {
+    Create = function()
+        return { Play = function() end }
     end,
+})
+local HttpService = safeService("HttpService", {
+    JSONDecode = function()
+        return { data = {} }
+    end,
+})
+local TeleportService = safeService("TeleportService", {
+    Teleport = function() end,
+    TeleportToPlaceInstance = function() end,
+})
+local VirtualUser = safeService("VirtualUser", {
+    CaptureController = function() end,
+    ClickButton1 = function() end,
+    ClickButton2 = function() end,
+})
+local VirtualInputManager = safeService("VirtualInputManager", { SendKeyEvent = function() end })
+local UserInputService = safeService("UserInputService")
+local Lighting = safeService("Lighting")
+local Workspace = workspace
+
+-- ---------------------------------------------------------------------------
+-- State
+-- ---------------------------------------------------------------------------
+local State = {
+    FarmWeapon = "Melee",
+    FarmRange = 250,
+    JobId = "",
 }
 
--- Expose for toggling from the executor console (never fatal if readonly).
-local exposed = false
-if type(getgenv) == "function" then
-    exposed = (pcall(function() getgenv().SmallSilentAim = API end))
+local Threads = {}
+local Connections = {}
+
+local function startThread(name, fn, interval)
+    Threads[name] = true
+    task.spawn(function()
+        while Threads[name] do
+            local ok, err = pcall(fn)
+            if not ok then
+                warn("[Kanna Hub] " .. name .. ": " .. tostring(err))
+            end
+            task.wait(interval or 0.1)
+        end
+    end)
 end
-if not exposed then
-    pcall(function() _G.SmallSilentAim = API end)
+
+local function stopThread(name)
+    Threads[name] = nil
 end
+
+local function isRunning(name)
+    return Threads[name] == true
+end
+
+local function connect(name, signal, fn)
+    if Connections[name] then
+        Connections[name]:Disconnect()
+    end
+    Connections[name] = signal:Connect(fn)
+end
+
+local function disconnect(name)
+    if Connections[name] then
+        Connections[name]:Disconnect()
+        Connections[name] = nil
+    end
+end
+
+-- ---------------------------------------------------------------------------
+-- Notifications
+-- ---------------------------------------------------------------------------
+local function notify(title, content, kind, duration)
+    pcall(function()
+        Fluent:Notify({
+            Title = tostring(title or "Kanna Hub"),
+            Content = tostring(content or ""),
+            Duration = duration or 3,
+            Type = kind or "Info",
+        })
+    end)
+end
+
+-- ---------------------------------------------------------------------------
+-- Character helpers
+-- ---------------------------------------------------------------------------
+local function currentPlayer()
+    local player = Players and Players.LocalPlayer or LocalPlayer
+    return player
+end
+
+local function getChar()
+    local player = currentPlayer()
+    return player and player.Character or nil
+end
+
+local function getRoot()
+    local char = getChar()
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function getHum()
+    local char = getChar()
+    return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+local function getBackpack()
+    local player = currentPlayer()
+    return player and player:FindFirstChild("Backpack") or nil
+end
+
+-- ---------------------------------------------------------------------------
+-- Remote helpers
+-- ---------------------------------------------------------------------------
+local function remotes()
+    if not ReplicatedStorage then
+        return nil
+    end
+    return ReplicatedStorage:FindFirstChild("Remotes")
+end
+
+local function commF()
+    local folder = remotes()
+    return folder and folder:FindFirstChild("CommF_")
+end
+
+local function invokeRemote(...)
+    local remote = commF()
+    if not remote then
+        return false
+    end
+    local args = table.pack(...)
+    local ok, err = pcall(function()
+        remote:InvokeServer(table.unpack(args, 1, args.n))
+    end)
+    if not ok then
+        warn("[Kanna Hub] remote error: " .. tostring(err))
+    end
+    return ok
+end
+
+local function redeemRemote(code)
+    local folder = remotes()
+    local remote = folder and folder:FindFirstChild("Redeem")
+    if not remote then
+        return false
+    end
+    local ok, err = pcall(function()
+        remote:InvokeServer(tostring(code))
+    end)
+    if not ok then
+        warn("[Kanna Hub] redeem error: " .. tostring(err))
+    end
+    return ok
+end
+
+-- ---------------------------------------------------------------------------
+-- Weapon helpers
+-- ---------------------------------------------------------------------------
+local GUN_WORDS = {
+    "gun", "bow", "rifle", "cannon", "bazooka", "sniper",
+    "musket", "pistol", "shotgun", "launcher", "slingshot",
+}
+local SWORD_WORDS = {
+    "sword", "blade", "katana", "cutlass", "saber", "rapier",
+    "trident", "spear", "scythe", "axe", "club", "hammer", "whip",
+}
+local FRUIT_WORDS = { "fruit", "fruit:" }
+
+local function containsAny(name, words)
+    for _, word in ipairs(words) do
+        if string.find(name, word, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local function toolKind(tool)
+    local name = string.lower(tool.Name)
+    if containsAny(name, GUN_WORDS) then
+        return "Gun"
+    end
+    if containsAny(name, FRUIT_WORDS) then
+        return "Fruit"
+    end
+    if containsAny(name, SWORD_WORDS) then
+        return "Sword"
+    end
+    return "Melee"
+end
+
+local function allTools()
+    local list = {}
+    local char = getChar()
+    local backpack = getBackpack()
+    for _, container in ipairs({ char, backpack }) do
+        if container then
+            for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("Tool") then
+                    table.insert(list, child)
+                end
+            end
+        end
+    end
+    return list
+end
+
+local function findTool(kind)
+    local equipped
+    local fallback
+    for _, tool in ipairs(allTools()) do
+        local matches = (kind == nil) or (toolKind(tool) == kind)
+        if matches then
+            if tool.Parent == getChar() then
+                equipped = tool
+            else
+                fallback = fallback or tool
+            end
+        end
+    end
+    return equipped or fallback
+end
+
+local function equipTool(kind)
+    local char = getChar()
+    local hum = getHum()
+    if not (char and hum) then
+        return nil
+    end
+    local tool = findTool(kind)
+    if tool and tool.Parent ~= char then
+        pcall(function()
+            hum:EquipTool(tool)
+        end)
+    end
+    return tool
+end
+
+local function activateTool(kind)
+    local tool = equipTool(kind)
+    if tool then
+        pcall(function()
+            tool:Activate()
+        end)
+    end
+    return tool
+end
+
+-- ---------------------------------------------------------------------------
+-- Enemy helpers
+-- ---------------------------------------------------------------------------
+local function enemiesFolder()
+    return Workspace:FindFirstChild("Enemies")
+end
+
+local function mobTarget(mob)
+    if not mob then
+        return nil
+    end
+    return mob:FindFirstChild("Head") or mob:FindFirstChild("HumanoidRootPart")
+end
+
+local function nearestMob(maxDistance)
+    local folder = enemiesFolder()
+    local myRoot = getRoot()
+    if not (folder and myRoot) then
+        return nil, math.huge
+    end
+    local best, bestDistance
+    for _, mob in ipairs(folder:GetChildren()) do
+        local target = mobTarget(mob)
+        local hum = mob:FindFirstChildOfClass("Humanoid")
+        if target and hum and hum.Health > 0 then
+            local distance = (target.Position - myRoot.Position).Magnitude
+            if distance <= (maxDistance or 300) and (not bestDistance or distance < bestDistance) then
+                best, bestDistance = mob, distance
+            end
+        end
+    end
+    return best, bestDistance or math.huge
+end
+
+-- ---------------------------------------------------------------------------
+-- Combat actions
+-- ---------------------------------------------------------------------------
+local function swing(kind)
+    activateTool(kind)
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new(0.5, 0.5))
+    end)
+end
+
+local function farmStep()
+    local myRoot = getRoot()
+    if not myRoot then
+        return
+    end
+    local mob = nearestMob(State.FarmRange)
+    local target = mobTarget(mob)
+    if not target then
+        return
+    end
+    myRoot.CFrame = target.CFrame * CFrame.new(0, 0, 3)
+    swing(State.FarmWeapon)
+end
+
+local function clickAtWorld(position)
+    local camera = Workspace.CurrentCamera
+    if not camera then
+        return
+    end
+    local ok, screen = pcall(function()
+        return camera:WorldToViewportPoint(position)
+    end)
+    if not ok or not screen then
+        return
+    end
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new(screen.X, screen.Y))
+    end)
+end
+
+local function gunStep()
+    local myRoot = getRoot()
+    if not myRoot then
+        return
+    end
+    local mob = nearestMob(State.FarmRange)
+    local target = mobTarget(mob)
+    if not target then
+        return
+    end
+    local flat = Vector3.new(target.Position.X, myRoot.Position.Y, target.Position.Z)
+    local away = (flat - target.Position)
+    if away.Magnitude < 0.1 then
+        away = Vector3.new(0, 0, 1)
+    end
+    local stand = flat + away.Unit * 26 + Vector3.new(0, 3, 0)
+    myRoot.CFrame = CFrame.lookAt(stand, target.Position)
+    local tool = equipTool("Gun")
+    clickAtWorld(target.Position)
+    if tool then
+        pcall(function()
+            tool:Activate()
+        end)
+    end
+end
+
+local chestCache = {}
+local nextChestScan = 0
+
+local function chestStep()
+    local myRoot = getRoot()
+    if not myRoot then
+        return
+    end
+    local now = os.clock()
+    if now >= nextChestScan then
+        nextChestScan = now + 1.5
+        chestCache = {}
+        local map = Workspace:FindFirstChild("Map") or Workspace
+        pcall(function()
+            local scanned = 0
+            for _, obj in ipairs(map:GetDescendants()) do
+                scanned = scanned + 1
+                if scanned > 4000 then
+                    break
+                end
+                if obj:IsA("BasePart") and string.find(string.lower(obj.Name), "chest", 1, true) then
+                    table.insert(chestCache, obj)
+                end
+            end
+        end)
+    end
+    local chest = chestCache[1]
+    if chest and chest.Parent then
+        myRoot.CFrame = CFrame.new(chest.Position + Vector3.new(0, 3, 0))
+    end
+end
+
+local storedTools = {}
+
+local function storeFruitStep()
+    local backpack = getBackpack()
+    if not backpack then
+        return
+    end
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and toolKind(tool) == "Fruit" then
+            if not storedTools[tool] then
+                storedTools[tool] = true
+                invokeRemote("StoreFruit", tool.Name)
+            end
+        end
+    end
+end
+
+local function randomFruitStep()
+    invokeRemote("Cousin", "Buy", "DLCBoxData")
+end
+
+local function fastAttackStep()
+    activateTool(State.FarmWeapon)
+end
+
+local function pressKey(key)
+    pcall(function()
+        VirtualInputManager:SendKeyEvent(true, key, false, game)
+        task.wait(0.05)
+        VirtualInputManager:SendKeyEvent(false, key, false, game)
+    end)
+end
+
+local function raceV4Step()
+    local char = getChar()
+    if not char then
+        return
+    end
+    local energy = tonumber(char:GetAttribute("RaceEnergy")) or 0
+    if energy >= 100 and not char:FindFirstChild("RaceTransformed") then
+        pressKey(Enum.KeyCode.Y)
+    end
+end
+
+local function raceV3Step()
+    local char = getChar()
+    if not char then
+        return
+    end
+    pressKey(Enum.KeyCode.T)
+end
+
+-- ---------------------------------------------------------------------------
+-- Utility actions
+-- ---------------------------------------------------------------------------
+local function applyLagFix(level)
+    pcall(function()
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 100000
+        Lighting.Brightness = 1
+        Lighting.EnvironmentDiffuseScale = 0
+        Lighting.EnvironmentSpecularScale = 0
+    end)
+    pcall(function()
+        local terrain = Workspace:FindFirstChildOfClass("Terrain")
+        if terrain then
+            terrain.WaterWaveSize = 0
+            terrain.WaterWaveSpeed = 0
+            terrain.WaterReflectance = 0
+            terrain.WaterTransparency = 1
+            if level >= 2 then
+                terrain.Decoration = false
+            end
+        end
+    end)
+    if level >= 2 then
+        pcall(function()
+            for _, obj in ipairs(Lighting:GetChildren()) do
+                if obj:IsA("PostEffect") or obj:IsA("Atmosphere") or obj:IsA("Clouds") then
+                    pcall(function()
+                        obj.Enabled = false
+                    end)
+                end
+            end
+        end)
+        pcall(function()
+            local scanned = 0
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                scanned = scanned + 1
+                if scanned > 4000 then
+                    break
+                end
+                if obj:IsA("BasePart") then
+                    pcall(function()
+                        obj.CastShadow = false
+                        obj.Reflectance = 0
+                    end)
+                end
+            end
+        end)
+    end
+end
+
+local function setNotificationsEnabled(enabled)
+    if not LocalPlayer then
+        return
+    end
+    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    if not playerGui then
+        return
+    end
+    local gui = playerGui:FindFirstChild("Notifications")
+    if gui then
+        pcall(function()
+            gui.Enabled = enabled
+        end)
+    end
+end
+
+local function setCooldownFree(enabled)
+    local char = getChar()
+    if char then
+        pcall(function()
+            char:SetAttribute("AllCooldown", enabled and 1 or 0)
+        end)
+    end
+    if enabled and LocalPlayer then
+        connect("cooldownChar", LocalPlayer.CharacterAdded, function(character)
+            task.wait(1)
+            pcall(function()
+                character:SetAttribute("AllCooldown", 1)
+            end)
+        end)
+    else
+        disconnect("cooldownChar")
+    end
+end
+
+local function teleportToIsland(name)
+    local myRoot = getRoot()
+    if not myRoot then
+        notify("Teleport", "Character not ready", "Error")
+        return
+    end
+    local needle = string.lower(tostring(name or ""))
+    if #needle == 0 then
+        notify("Teleport", "Pick an island first", "Error")
+        return
+    end
+    local map = Workspace:FindFirstChild("Map") or Workspace
+    for _, obj in ipairs(map:GetDescendants()) do
+        if obj:IsA("Model") and string.find(string.lower(obj.Name), needle, 1, true) then
+            local ok, pivot = pcall(function()
+                return obj:GetPivot()
+            end)
+            if ok and pivot then
+                myRoot.CFrame = CFrame.new(pivot.Position + Vector3.new(0, 10, 0))
+                notify("Teleport", "Teleported to " .. obj.Name, "Success")
+                return
+            end
+        end
+    end
+    notify("Teleport", "Island not loaded: " .. tostring(name), "Error")
+end
+
+local function islandNames()
+    local names, seen = {}, {}
+    local map = Workspace:FindFirstChild("Map")
+    for _, source in ipairs({ map, Workspace }) do
+        if source then
+            for _, obj in ipairs(source:GetChildren()) do
+                if obj:IsA("Model") and not seen[obj.Name] then
+                    seen[obj.Name] = true
+                    table.insert(names, obj.Name)
+                end
+            end
+        end
+    end
+    table.sort(names)
+    return names
+end
+
+-- ---------------------------------------------------------------------------
+-- Window
+-- ---------------------------------------------------------------------------
+local Window = Fluent:CreateWindow({
+    Title = "Kanna Kamui Hub",
+    SubTitle = "Divine Fruits",
+    Acrylic = true,
+    MinimizeKey = Enum.KeyCode.LeftControl,
+    Search = false,
+    Size = UDim2.fromOffset(430, 470),
+    TabWidth = 130,
+    Theme = "Blood Red",
+    Version = "67.36 FULL",
+})
+
+-- ---------------------------------------------------------------------------
+-- Tab: Shop
+-- ---------------------------------------------------------------------------
+local Shop = Window:AddTab({ Title = "Shop", Icon = "solar/shop-bold" })
+local StyleSection = Shop:AddSection("Buy Fighting Styles", "solar/swords-bold")
+
+local STYLES = { "Divine Art", "Celestial Art", "Sanguine Art", "Dragon Talon" }
+
+for _, style in ipairs(STYLES) do
+    StyleSection:AddButton({
+        Title = "Buy " .. style,
+        Icon = "solar/swords-bold",
+        Callback = function()
+            invokeRemote("SwitchStyle", style)
+            notify("Fighting Styles", "Requested " .. style, "Success")
+        end,
+    })
+end
+
+StyleSection:AddButton({
+    Title = "Buy Godhuman",
+    Icon = "solar/fist-bold",
+    Callback = function()
+        invokeRemote("BuyGodhuman")
+        notify("Fighting Styles", "Requested Godhuman", "Success")
+    end,
+})
+
+StyleSection:AddButton({
+    Title = "Buy All Fighting Styles",
+    Icon = "solar/star-bold",
+    Callback = function()
+        task.spawn(function()
+            for _, style in ipairs(STYLES) do
+                invokeRemote("SwitchStyle", style)
+                task.wait(0.35)
+            end
+            notify("Fighting Styles", "All styles requested", "Success")
+        end)
+    end,
+})
+
+local FruitSection = Shop:AddSection("Random Fruits", "solar/fruit-bold")
+
+FruitSection:AddToggle("AutoRandomFruits", {
+    Title = "Auto Random Fruits",
+    Default = false,
+    Icon = "solar/refresh-bold",
+    Callback = function(state)
+        if state then
+            randomFruitStep()
+            startThread("randomFruits", randomFruitStep, 1.5)
+            notify("Fruits", "Auto random fruit started", "Info")
+        else
+            stopThread("randomFruits")
+        end
+    end,
+})
+
+FruitSection:AddButton({
+    Title = "Random Fruits",
+    Icon = "solar/fruit-bold",
+    Callback = function()
+        randomFruitStep()
+        notify("Fruits", "Opened a random fruit box", "Success")
+    end,
+})
+
+FruitSection:AddToggle("AutoStoreFruits", {
+    Title = "Auto Store Fruits",
+    Default = false,
+    Icon = "solar/box-bold",
+    Callback = function(state)
+        if state then
+            storedTools = {}
+            storeFruitStep()
+            startThread("storeFruits", storeFruitStep, 2)
+            notify("Fruits", "Auto store started", "Info")
+        else
+            stopThread("storeFruits")
+        end
+    end,
+})
+
+-- ---------------------------------------------------------------------------
+-- Tab: Settings
+-- ---------------------------------------------------------------------------
+local Settings = Window:AddTab({ Title = "Settings", Icon = "solar/settings-bold" })
+local ScaleSection = Settings:AddSection("GUI Scale", "solar/expand-bold")
+
+local function setWindowSize(width, height)
+    pcall(function()
+        Window:Maximize(false, true, true)
+        Window.Size = UDim2.fromOffset(width, height)
+        local tween = TweenService:Create(
+            Window.Root,
+            TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = UDim2.fromOffset(width, height) }
+        )
+        tween:Play()
+    end)
+end
+
+local function openScaleDialog()
+    pcall(function()
+        Window:Dialog({
+            Title = "Change GUI Scale",
+            Content = "Pick the interface size that fits your screen.",
+            Buttons = {
+                { Title = "Small", Callback = function() setWindowSize(360, 340) end },
+                { Title = "Medium", Callback = function() setWindowSize(480, 460) end },
+                { Title = "Large", Callback = function() setWindowSize(620, 580) end },
+            },
+        })
+    end)
+end
+
+ScaleSection:AddButton({
+    Title = "Change GUI Scale",
+    Icon = "solar/scale-bold",
+    Callback = openScaleDialog,
+})
+
+ScaleSection:AddDropdown("JoinTeamSelect", {
+    Title = "Join Team (Auto)",
+    Default = "Pirates",
+    Multi = false,
+    Values = { "Pirates", "Marines" },
+    Callback = function(value)
+        task.spawn(function()
+            task.wait(0.4)
+            invokeRemote("SetTeam2", value)
+            notify("Team", "Joined " .. tostring(value), "Success")
+        end)
+    end,
+})
+
+ScaleSection:AddToggle("AntiAFK", {
+    Title = "Anti AFK",
+    Default = false,
+    Icon = "solar/clock-bold",
+    Callback = function(state)
+        if state then
+            local player = currentPlayer()
+            if not player then
+                notify("Utility", "Player not ready yet", "Error")
+                return
+            end
+            connect("antiAfk", player.Idled, function()
+                pcall(function()
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton2(Vector2.new())
+                end)
+            end)
+            notify("Utility", "Anti AFK enabled", "Info")
+        else
+            disconnect("antiAfk")
+        end
+    end,
+})
+
+ScaleSection:AddToggle("AutoDisconnectAfterKick", {
+    Title = "Auto Disconnect After Game Kick",
+    Default = false,
+    Icon = "solar/wifi-bold",
+    Callback = function(state)
+        if state then
+            notify("Utility", "Auto reconnect was removed in the offline build", "Info")
+        else
+            disconnect("kickPrompt")
+        end
+    end,
+})
+
+local CombatSection = Settings:AddSection("Combat", "solar/swords-bold")
+
+CombatSection:AddToggle("AutoM1", {
+    Title = "Fast Fruits M1",
+    Default = false,
+    Icon = "solar/click-bold",
+    Callback = function(state)
+        if state then
+            startThread("m1", fastAttackStep, 0.1)
+        else
+            stopThread("m1")
+        end
+    end,
+})
+
+CombatSection:AddToggle("FastAttack", {
+    Title = "Fast Attack",
+    Default = true,
+    Icon = "solar/swords-bold",
+    Callback = function(state)
+        if state then
+            startThread("fastAttack", fastAttackStep, 0.08)
+        else
+            stopThread("fastAttack")
+        end
+    end,
+})
+
+CombatSection:AddToggle("AutoGunShoot", {
+    Title = "Auto Shoot Gun",
+    Default = false,
+    Icon = "solar/gun-bold",
+    Callback = function(state)
+        if state then
+            if not findTool("Gun") then
+                notify("Combat", "Equip or buy a gun first", "Error")
+            end
+            startThread("gunShoot", gunStep, 0.12)
+        else
+            stopThread("gunShoot")
+        end
+    end,
+})
+
+CombatSection:AddToggle("AutoRaceV4", {
+    Title = "Auto Use Race V4",
+    Default = false,
+    Icon = "solar/star-bold",
+    Callback = function(state)
+        if state then
+            startThread("raceV4", raceV4Step, 0.4)
+            notify("Race", "Will press Y when RaceEnergy is full", "Info")
+        else
+            stopThread("raceV4")
+        end
+    end,
+})
+
+CombatSection:AddToggle("AutoTurnOnV3", {
+    Title = "Auto Turn On Race V3",
+    Default = false,
+    Icon = "solar/bolt-bold",
+    Callback = function(state)
+        if state then
+            startThread("raceV3", raceV3Step, 1)
+            notify("Race", "Will press T for the race skill", "Info")
+        else
+            stopThread("raceV3")
+        end
+    end,
+})
+
+CombatSection:AddToggle("FreeOpFun", {
+    Title = "Free OP Fun (No Cooldown)",
+    Default = false,
+    Icon = "solar/star-bold",
+    Callback = function(state)
+        setCooldownFree(state)
+        notify("Combat", state and "Cooldowns disabled" or "Cooldowns restored", "Info")
+    end,
+})
+
+CombatSection:AddDivider()
+
+local MoreSection = Settings:AddSection("More", "solar/bell-bold")
+
+MoreSection:AddButton({
+    Title = "Redeem Codes",
+    Icon = "solar/gift-bold",
+    Callback = function()
+        for _, code in ipairs({ "2500Players", "FollowElka", "GASUPDATE" }) do
+            redeemRemote(code)
+        end
+        notify("Codes", "Redeemed known codes", "Success")
+    end,
+})
+
+MoreSection:AddToggle("FixLag", {
+    Title = "Fix Lag",
+    Default = false,
+    Icon = "solar/speedometer-bold",
+    Callback = function(state)
+        if state then
+            applyLagFix(1)
+            notify("Performance", "Lag reduction applied", "Success")
+        end
+    end,
+})
+
+MoreSection:AddToggle("SuperFixLag", {
+    Title = "Super Fix Lag",
+    Default = false,
+    Icon = "solar/speedometer-bold",
+    Callback = function(state)
+        if state then
+            applyLagFix(2)
+            notify("Performance", "Super lag reduction applied", "Success")
+        end
+    end,
+})
+
+MoreSection:AddToggle("DisableNotify", {
+    Title = "Disable Notify",
+    Default = false,
+    Icon = "solar/bell-cross-bold",
+    Callback = function(state)
+        setNotificationsEnabled(not state)
+    end,
+})
+
+-- ---------------------------------------------------------------------------
+-- Tab: Farm
+-- ---------------------------------------------------------------------------
+local Farm = Window:AddTab({ Title = "Farm", Icon = "solar/leaf-bold" })
+local FarmSection = Farm:AddSection("Auto Farm", "solar/leaf-bold")
+
+FarmSection:AddDropdown("FarmWeaponSelect", {
+    Title = "Select weapon for farm",
+    Default = "Melee",
+    Multi = false,
+    Values = { "Melee", "Fruit", "Sword", "Gun" },
+    Callback = function(value)
+        State.FarmWeapon = value or "Melee"
+        notify("Farm", "Farm weapon: " .. State.FarmWeapon, "Info")
+    end,
+})
+
+FarmSection:AddDropdown("FarmRange", {
+    Title = "Farm Range",
+    Default = "250",
+    Multi = false,
+    Values = { "100", "150", "200", "250", "350", "450", "600" },
+    Callback = function(value)
+        State.FarmRange = tonumber(value) or 250
+    end,
+})
+
+FarmSection:AddDivider()
+
+FarmSection:AddToggle("AutoFarmLevel", {
+    Title = "Auto Farm Level",
+    Default = false,
+    Icon = "solar/leaf-bold",
+    Callback = function(state)
+        if state then
+            startThread("farm", farmStep, 0.12)
+            notify("Farm", "Auto farm level started", "Success")
+        else
+            stopThread("farm")
+        end
+    end,
+})
+
+FarmSection:AddDivider()
+
+FarmSection:AddToggle("AutoFarmChest", {
+    Title = "Auto Farm Chest",
+    Default = false,
+    Icon = "solar/box-bold",
+    Callback = function(state)
+        if state then
+            chestCache = {}
+            nextChestScan = 0
+            startThread("chest", chestStep, 0.4)
+            notify("Farm", "Auto farm chest started", "Success")
+        else
+            stopThread("chest")
+        end
+    end,
+})
+
+-- ---------------------------------------------------------------------------
+-- Tab: Teleport
+-- ---------------------------------------------------------------------------
+local Teleport = Window:AddTab({ Title = "Teleport", Icon = "solar/transfer-horizontal-bold" })
+local TeleportSection = Teleport:AddSection("Teleport", "solar/transfer-horizontal-bold")
+
+local IslandDropdown = TeleportSection:AddDropdown("IslandSelector", {
+    Title = "Islands",
+    Multi = false,
+    Values = { "Refresh the list" },
+    Callback = function(value)
+        State.Island = value
+    end,
+})
+
+TeleportSection:AddButton({
+    Title = "Refresh List",
+    Icon = "solar/refresh-bold",
+    Callback = function()
+        local names = islandNames()
+        if #names == 0 then
+            names = { "No islands loaded yet" }
+        end
+        pcall(function()
+            IslandDropdown:SetValues(names)
+        end)
+        notify("Teleport", "Found " .. #names .. " islands", "Success")
+    end,
+})
+
+TeleportSection:AddButton({
+    Title = "Teleport",
+    Icon = "solar/route-bold",
+    Callback = function()
+        teleportToIsland(State.Island or (IslandDropdown and IslandDropdown.Value))
+    end,
+})
+
+TeleportSection:AddDivider()
+
+local SEA_IDS = {
+    ["First Sea"] = 135658482799046,
+    ["Second Sea"] = 86799537014206,
+    ["Third Sea"] = 98423078180065,
+}
+
+for _, sea in ipairs({ "First Sea", "Second Sea", "Third Sea" }) do
+    TeleportSection:AddButton({
+        Title = "Teleport to " .. sea,
+        Icon = "solar/global-bold",
+        Callback = function()
+            local ok = pcall(function()
+                TeleportService:Teleport(SEA_IDS[sea], LocalPlayer)
+            end)
+            if ok then
+                notify("Teleport", "Traveling to " .. sea, "Success")
+            else
+                notify("Teleport", "Teleport failed", "Error")
+            end
+        end,
+    })
+end
+
+-- === SERVER TOOLS (Roblox TeleportService only - no HTTP) ===
+local ServerSection = Teleport:AddSection("Server Teleport", "solar/transfer-horizontal-bold")
+
+ServerSection:AddButton({
+    Title = "Server Hop (New Server)",
+    Icon = "solar/refresh-bold",
+    Callback = function()
+        local ok = pcall(function()
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end)
+        notify("Server Hop", ok and "Hopping to a new server..." or "Server hop failed", ok and "Success" or "Error")
+    end,
+})
+
+ServerSection:AddButton({
+    Title = "Rejoin (Same Server)",
+    Icon = "solar/home-bold",
+    Callback = function()
+        local ok = pcall(function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        end)
+        notify("Rejoin", ok and "Rejoining current server..." or "Rejoin failed", ok and "Success" or "Error")
+    end,
+})
+
+local JobInput = ServerSection:AddInput("JobIdInput", {
+    Title = "Server Job ID",
+    Default = "",
+    Placeholder = "Paste job id here...",
+    Callback = function(value)
+        State.JobId = tostring(value or "")
+    end,
+})
+
+ServerSection:AddButton({
+    Title = "Join Job ID",
+    Icon = "solar/transfer-horizontal-bold",
+    Callback = function()
+        local jobId = tostring(State.JobId or "")
+        if #jobId < 8 then
+            notify("Join Job ID", "Enter a valid Job ID first", "Error")
+            return
+        end
+        local ok = pcall(function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, LocalPlayer)
+        end)
+        notify("Join Job ID", ok and ("Joining " .. jobId) or "Join failed", ok and "Success" or "Error")
+    end,
+})
+
+ServerSection:AddButton({
+    Title = "Copy Job ID",
+    Icon = "solar/copy-bold",
+    Callback = function()
+        local copied = pcall(function()
+            if setclipboard then
+                setclipboard(game.JobId)
+            end
+        end)
+        notify("Job ID", copied and ("Copied: " .. game.JobId) or game.JobId, copied and "Success" or "Info", 5)
+    end,
+})
+
+
+-- ---------------------------------------------------------------------------
+-- Tab: More
+-- ---------------------------------------------------------------------------
+local More = Window:AddTab({ Title = "More", Icon = "solar/send-bold" })
+local FeedbackSection = More:AddSection("Feedback", "solar/send-bold")
+
+local genv = (typeof(getgenv) == "function" and getgenv()) or _G
+local reports = genv.KannaReports or {}
+genv.KannaReports = reports
+
+local FeedbackInput = FeedbackSection:AddInput("FeedbackInput", {
+    Title = "Send Feedback",
+    Default = "",
+    Icon = "solar/chat-round-bold",
+    Placeholder = "Type your feedback here...",
+    Callback = function(value)
+        State.Feedback = tostring(value or "")
+    end,
+})
+
+FeedbackSection:AddButton({
+    Title = "Send",
+    Icon = "solar/send-bold",
+    Callback = function()
+        local text = tostring((FeedbackInput and FeedbackInput.Value) or State.Feedback or "")
+        if #text > 0 then
+            table.insert(reports, { kind = "feedback", text = text, at = os.time() })
+            notify("Feedback", "Saved locally. Thank you!", "Success")
+            State.Feedback = ""
+            if FeedbackInput then
+                FeedbackInput:SetValue("")
+            end
+        else
+            notify("Feedback", "Write something first", "Error")
+        end
+    end,
+})
+
+local BugSection = More:AddSection("Bug Report", "solar/bug-bold")
+
+local BugInput = BugSection:AddInput("BugReportInput", {
+    Title = "Describe the bug",
+    Default = "",
+    Icon = "solar/bug-bold",
+    Placeholder = "Enter bug details...",
+    Callback = function(value)
+        State.Bug = tostring(value or "")
+    end,
+})
+
+BugSection:AddButton({
+    Title = "Save Report",
+    Icon = "solar/bug-bold",
+    Callback = function()
+        local text = tostring((BugInput and BugInput.Value) or State.Bug or "")
+        if #text > 0 then
+            table.insert(reports, { kind = "bug", text = text, at = os.time() })
+            notify("Bug Report", "Saved locally (" .. #reports .. " reports)", "Success")
+            State.Bug = ""
+            if BugInput then
+                BugInput:SetValue("")
+            end
+        else
+            notify("Bug Report", "Describe the bug first", "Error")
+        end
+    end,
+})
+
+-- ---------------------------------------------------------------------------
+-- Startup
+-- ---------------------------------------------------------------------------
+-- Fast Attack defaults to ON in the original hub; Fluent only stores the
+-- default value without firing the callback, so start it explicitly.
+startThread("fastAttack", fastAttackStep, 0.08)
+
+-- Compatibility exports: the original Luraph build exposed these global
+-- names. Keep them so existing keybinds/scripts still work.
+do
+    local api = (typeof(getgenv) == "function" and getgenv()) or _G
+    api.StartAutoFarm = function()
+        startThread("farm", farmStep, 0.12)
+    end
+    api.StopAutoFarm = function()
+        stopThread("farm")
+    end
+    api.StartAutoFarmChestLoop = function()
+        startThread("chest", chestStep, 0.4)
+    end
+    api.StopAutoFarmChestLoop = function()
+        stopThread("chest")
+    end
+    api.StartGunShoot = function()
+        startThread("gunShoot", gunStep, 0.12)
+    end
+    api.StopGunShoot = function()
+        stopThread("gunShoot")
+    end
+    api.StopGunShootSilent = api.StopGunShoot
+end
+
+task.spawn(function()
+    task.wait(3)
+    pcall(function()
+        local names = islandNames()
+        if #names > 0 then
+            IslandDropdown:SetValues(names)
+        end
+    end)
+end)
+
+notify("Kanna Kamui Hub", "Loaded. Left CTRL toggles the menu.", "Success", 5)
