@@ -1,0 +1,718 @@
+--[[
+    Small Silent Aim + Pro UI (standalone, no remote loadstring, no key/license)
+    Based on silentaimmodule.lua, rebuilt as a compact self-contained script.
+
+    UI:
+      * RightShift      -> show / hide the panel
+      * ON / OFF pill   -> master switch
+      * PLAYERS / NPCS / BOTH -> where aim goes
+      * Sliders         -> range, prediction
+      * Toggles         -> highlight, team check, mouse spoof
+
+    Aim:
+      * Closest valid target every frame (RenderStepped).
+      * Rewrites the first Vector3 argument of RemoteEvent:FireServer /
+        RemoteFunction:InvokeServer through a __namecall hook.
+      * Optionally spoofs ReplicatedStorage.Mouse (game specific, safe if missing).
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local LP = Players.LocalPlayer
+
+-- =========================
+-- Config
+-- =========================
+local CFG = {
+    Enabled = true,
+    Range = 500,
+    Prediction = 0.12,
+    AimPlayers = true,
+    AimNPCs = true,
+    NPCFolder = "Enemies",
+    TeamCheck = true,        -- false if the game allows team killing
+    Highlight = false,
+    MouseSpoof = true,
+    ToggleKey = Enum.KeyCode.RightShift,
+    IgnoreRemotes = {},      -- e.g. { Move = true, Ping = true }
+}
+
+local state = {
+    enabled = CFG.Enabled,
+    aimPos = nil,
+    aimModel = nil,
+    highlight = nil,
+    root = nil,
+    status = nil,
+}
+
+-- =========================
+-- Target selection
+-- =========================
+local function hrpOf(model)
+    return model and model:FindFirstChild("HumanoidRootPart")
+end
+
+local function isEnemyPlayer(pl)
+    if pl == LP or not pl.Character then return false end
+    if CFG.TeamCheck and pl.Team and LP.Team and pl.Team == LP.Team then
+        return false
+    end
+    return true
+end
+
+local function predict(hrp)
+    local v = hrp.AssemblyLinearVelocity or hrp.Velocity
+    if not v or v.Magnitude < 5 then
+        return hrp.Position
+    end
+    return hrp.Position + v * CFG.Prediction
+end
+
+local function candidate(model, myPos)
+    if not model then return nil end
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    local hrp = hrpOf(model)
+    if not (hum and hum.Health > 0 and hrp) then return nil end
+    local pos = predict(hrp)
+    local dist = (pos - myPos).Magnitude
+    if dist > CFG.Range then return nil end
+    return { model = model, pos = pos, dist = dist }
+end
+
+local function updateTarget()
+    state.aimPos, state.aimModel = nil, nil
+    if not state.enabled then return end
+
+    local char = LP.Character
+    local myHrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return end
+    local myPos = myHrp.Position
+
+    local best = nil
+
+    if CFG.AimPlayers then
+        for _, pl in ipairs(Players:GetPlayers()) do
+            if isEnemyPlayer(pl) then
+                local c = candidate(pl.Character, myPos)
+                if c and (not best or c.dist < best.dist) then best = c end
+            end
+        end
+    end
+
+    if CFG.AimNPCs then
+        local folder = workspace:FindFirstChild(CFG.NPCFolder)
+        if folder then
+            for _, npc in ipairs(folder:GetChildren()) do
+                if npc:IsA("Model") then
+                    local c = candidate(npc, myPos)
+                    if c and (not best or c.dist < best.dist) then best = c end
+                end
+            end
+        end
+    end
+
+    if best then
+        state.aimPos = best.pos
+        state.aimModel = best.model
+    end
+end
+
+-- =========================
+-- Optional highlight
+-- =========================
+local function updateHighlight()
+    if not CFG.Highlight then return end
+    local hl = state.highlight
+
+    if hl and (not state.aimModel or hl.Adornee ~= state.aimModel) then
+        hl:Destroy()
+        state.highlight, hl = nil, nil
+    end
+
+    if not hl and state.aimModel then
+        hl = Instance.new("Highlight")
+        hl.FillColor = Color3.fromRGB(255, 60, 60)
+        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        hl.FillTransparency = 0.5
+        hl.Adornee = state.aimModel
+        hl.Parent = state.aimModel
+        state.highlight = hl
+    end
+end
+
+-- =========================
+-- __namecall hook
+-- =========================
+local function installHook()
+    if type(hookmetamethod) ~= "function" or type(getrawmetatable) ~= "function" then
+        return false
+    end
+
+    local ok, mt = pcall(getrawmetatable, game)
+    if not ok or not mt then return false end
+
+    pcall(setreadonly, mt, false)
+    local old
+    old = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = (getnamecallmethod and getnamecallmethod()) or ""
+        method = string.lower(method)
+
+        if state.enabled and state.aimPos
+            and (method == "fireserver" or method == "invokeserver") then
+            local okName, name = pcall(function() return self.Name end)
+            if not okName or not CFG.IgnoreRemotes[name] then
+                local cls = nil
+                pcall(function() cls = self.ClassName end)
+                if cls == "RemoteEvent" or cls == "RemoteFunction"
+                    or cls == "UnreliableRemoteEvent" then
+                    local args = { ... }
+                    for i = 1, math.min(#args, 3) do
+                        if typeof(args[i]) == "Vector3" then
+                            args[i] = state.aimPos
+                            return old(self, table.unpack(args))
+                        end
+                    end
+                end
+            end
+        end
+
+        return old(self, ...)
+    end)
+    pcall(setreadonly, mt, true)
+    return true
+end
+
+-- =========================
+-- Mouse module spoof (game specific, safe if missing)
+-- =========================
+local mouseData = nil
+if CFG.MouseSpoof then
+    local m = RS:FindFirstChild("Mouse")
+    if m and m:IsA("ModuleScript") then
+        local ok, res = pcall(require, m)
+        if ok and type(res) == "table" then
+            mouseData = res
+        end
+    end
+end
+
+-- =========================
+-- Pro UI
+-- =========================
+local ACCENT = Color3.fromRGB(94, 129, 244)
+local GREEN = Color3.fromRGB(56, 200, 140)
+local DARK = Color3.fromRGB(18, 20, 26)
+local ROW = Color3.fromRGB(30, 33, 42)
+local TEXT = Color3.fromRGB(235, 238, 245)
+local MUTED = Color3.fromRGB(132, 140, 158)
+
+local setEnabled
+local ui = {}
+
+local function new(class, props, parent)
+    local o = Instance.new(class)
+    for k, v in pairs(props or {}) do
+        o[k] = v
+    end
+    if parent then o.Parent = parent end
+    return o
+end
+
+local function tween(o, props, time)
+    pcall(function()
+        TweenService:Create(
+            o,
+            TweenInfo.new(time or 0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            props
+        ):Play()
+    end)
+end
+
+local function section(parent, text)
+    local frame = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 14),
+        BackgroundTransparency = 1,
+    }, parent)
+    new("TextLabel", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = text,
+        TextColor3 = MUTED,
+        TextSize = 10,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, frame)
+    return frame
+end
+
+local function makeToggle(parent, label, get, set)
+    local row = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 28),
+        BackgroundTransparency = 1,
+    }, parent)
+
+    new("TextLabel", {
+        Size = UDim2.new(1, -50, 1, 0),
+        BackgroundTransparency = 1,
+        Text = label,
+        TextColor3 = TEXT,
+        TextSize = 13,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, row)
+
+    local sw = new("TextButton", {
+        Size = UDim2.fromOffset(38, 20),
+        Position = UDim2.new(1, -38, 0.5, -10),
+        BackgroundColor3 = ROW,
+        Text = "",
+        AutoButtonColor = false,
+        BorderSizePixel = 0,
+    }, row)
+    new("UICorner", { CornerRadius = UDim.new(1, 0) }, sw)
+
+    local knob = new("Frame", {
+        Size = UDim2.fromOffset(14, 14),
+        Position = UDim2.new(0, 3, 0.5, -7),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+    }, sw)
+    new("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
+
+    local function render(v)
+        tween(sw, { BackgroundColor3 = v and GREEN or ROW })
+        tween(knob, {
+            Position = v and UDim2.new(1, -17, 0.5, -7) or UDim2.new(0, 3, 0.5, -7),
+        })
+    end
+
+    sw.MouseButton1Click:Connect(function()
+        local v = not get()
+        set(v)
+        render(v)
+    end)
+
+    render(get())
+    return row
+end
+
+local activeSlider = nil
+
+local function makeSlider(parent, label, min, max, value, decimals, onChange)
+    local wrap = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 36),
+        BackgroundTransparency = 1,
+    }, parent)
+
+    new("TextLabel", {
+        Size = UDim2.new(1, -60, 0, 16),
+        BackgroundTransparency = 1,
+        Text = label,
+        TextColor3 = TEXT,
+        TextSize = 12,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, wrap)
+
+    local valLabel = new("TextLabel", {
+        Size = UDim2.new(0, 60, 0, 16),
+        Position = UDim2.new(1, -60, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = ACCENT,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Right,
+    }, wrap)
+
+    local hit = new("TextButton", {
+        Size = UDim2.new(1, 0, 0, 18),
+        Position = UDim2.new(0, 0, 0, 18),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+    }, wrap)
+
+    local bar = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 4),
+        Position = UDim2.new(0, 0, 0.5, -2),
+        BackgroundColor3 = ROW,
+        BorderSizePixel = 0,
+    }, hit)
+    new("UICorner", { CornerRadius = UDim.new(1, 0) }, bar)
+
+    local fill = new("Frame", {
+        Size = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = ACCENT,
+        BorderSizePixel = 0,
+    }, bar)
+    new("UICorner", { CornerRadius = UDim.new(1, 0) }, fill)
+
+    local knob = new("Frame", {
+        Size = UDim2.fromOffset(12, 12),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+    }, hit)
+    new("UICorner", { CornerRadius = UDim.new(1, 0) }, knob)
+
+    local function apply(alpha)
+        alpha = math.clamp(alpha, 0, 1)
+        local mult = 10 ^ (decimals or 0)
+        local v = math.floor((min + (max - min) * alpha) * mult + 0.5) / mult
+        fill.Size = UDim2.new(alpha, 0, 1, 0)
+        knob.Position = UDim2.new(alpha, 0, 0.5, 0)
+        valLabel.Text = string.format("%." .. (decimals or 0) .. "f", v)
+        onChange(v)
+    end
+
+    local function applyFromX(px)
+        local x = px - hit.AbsolutePosition.X
+        apply(x / math.max(hit.AbsoluteSize.X, 1))
+    end
+
+    hit.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            activeSlider = hit
+            applyFromX(input.Position.X)
+        end
+    end)
+
+    hit.InputChanged:Connect(function(input)
+        if activeSlider ~= hit then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch then
+            applyFromX(input.Position.X)
+        end
+    end)
+
+    apply((value - min) / (max - min))
+    return wrap
+end
+
+local function makeModeSelector(parent)
+    local wrap = new("Frame", {
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = ROW,
+        BorderSizePixel = 0,
+    }, parent)
+    new("UICorner", { CornerRadius = UDim.new(0, 8) }, wrap)
+
+    local modes = {
+        { text = "PLAYERS", players = true, npcs = false },
+        { text = "NPCS", players = false, npcs = true },
+        { text = "BOTH", players = true, npcs = true },
+    }
+    local buttons = {}
+
+    local function select(index, silent)
+        for i, b in ipairs(buttons) do
+            b.BackgroundColor3 = (i == index) and ACCENT or ROW
+            b.TextColor3 = (i == index) and Color3.fromRGB(255, 255, 255) or MUTED
+        end
+        local m = modes[index]
+        CFG.AimPlayers, CFG.AimNPCs = m.players, m.npcs
+        if not silent and ui.paintStatus then ui.paintStatus() end
+    end
+
+    local function current()
+        if CFG.AimPlayers and CFG.AimNPCs then return 3 end
+        if CFG.AimNPCs then return 2 end
+        return 1
+    end
+
+    for i, mode in ipairs(modes) do
+        local b = new("TextButton", {
+            Size = UDim2.new(1 / 3, -4, 1, -4),
+            Position = UDim2.new((i - 1) / 3, 2, 0, 2),
+            BackgroundColor3 = ROW,
+            Text = mode.text,
+            TextSize = 11,
+            Font = Enum.Font.GothamBold,
+            AutoButtonColor = false,
+            BorderSizePixel = 0,
+        }, wrap)
+        new("UICorner", { CornerRadius = UDim.new(0, 6) }, b)
+        b.MouseButton1Click:Connect(function() select(i) end)
+        buttons[i] = b
+    end
+
+    select(current(), true)
+    return wrap
+end
+
+local function makeGui()
+    local pg = LP:FindFirstChild("PlayerGui")
+    if not pg then return end
+
+    local old = pg:FindFirstChild("SmallSilentAim")
+    if old then old:Destroy() end
+
+    local gui = new("ScreenGui", {
+        Name = "SmallSilentAim",
+        ResetOnSpawn = false,
+        IgnoreGuiInset = true,
+        DisplayOrder = 99,
+    }, pg)
+
+    local root = new("Frame", {
+        Size = UDim2.fromOffset(272, 356),
+        Position = UDim2.new(0, 24, 0.5, -178),
+        BackgroundColor3 = DARK,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+    }, gui)
+    new("UICorner", { CornerRadius = UDim.new(0, 12) }, root)
+    new("UIStroke", { Color = Color3.fromRGB(45, 49, 62), Thickness = 1 }, root)
+
+    -- Header (also the drag area)
+    local header = new("TextButton", {
+        Size = UDim2.new(1, 0, 0, 46),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+    }, root)
+
+    new("TextLabel", {
+        Size = UDim2.new(1, -100, 0, 20),
+        Position = UDim2.new(0, 14, 0, 7),
+        BackgroundTransparency = 1,
+        Text = "SILENT AIM",
+        TextColor3 = TEXT,
+        TextSize = 15,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+    }, header)
+
+    local status = new("TextLabel", {
+        Size = UDim2.new(1, -110, 0, 14),
+        Position = UDim2.new(0, 14, 0, 26),
+        BackgroundTransparency = 1,
+        Text = "searching...",
+        TextColor3 = MUTED,
+        TextSize = 11,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+    }, header)
+
+    local power = new("TextButton", {
+        Size = UDim2.fromOffset(46, 22),
+        Position = UDim2.new(1, -86, 0.5, -11),
+        BackgroundColor3 = GREEN,
+        Text = "ON",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 11,
+        Font = Enum.Font.GothamBold,
+        AutoButtonColor = false,
+        BorderSizePixel = 0,
+    }, header)
+    new("UICorner", { CornerRadius = UDim.new(1, 0) }, power)
+
+    local minBtn = new("TextButton", {
+        Size = UDim2.fromOffset(22, 22),
+        Position = UDim2.new(1, -34, 0.5, -11),
+        BackgroundColor3 = ROW,
+        Text = "-",
+        TextColor3 = TEXT,
+        TextSize = 16,
+        Font = Enum.Font.GothamBold,
+        AutoButtonColor = false,
+        BorderSizePixel = 0,
+    }, header)
+    new("UICorner", { CornerRadius = UDim.new(0, 6) }, minBtn)
+
+    -- Content
+    local content = new("Frame", {
+        Size = UDim2.new(1, -20, 1, -64),
+        Position = UDim2.new(0, 10, 0, 54),
+        BackgroundTransparency = 1,
+    }, root)
+
+    new("UIListLayout", {
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, content)
+
+    section(content, "TARGET")
+    ui.modeRow = makeModeSelector(content)
+
+    section(content, "SETTINGS")
+    makeToggle(content, "Prediction", function() return CFG.Prediction > 0 end, function(v)
+        CFG.Prediction = v and 0.12 or 0
+    end)
+    makeToggle(content, "Highlight", function() return CFG.Highlight end, function(v)
+        CFG.Highlight = v
+        if not v and state.highlight then
+            state.highlight:Destroy()
+            state.highlight = nil
+        end
+    end)
+    makeToggle(content, "Team check", function() return CFG.TeamCheck end, function(v)
+        CFG.TeamCheck = v
+    end)
+    makeToggle(content, "Mouse spoof", function() return CFG.MouseSpoof end, function(v)
+        CFG.MouseSpoof = v
+    end)
+
+    makeSlider(content, "Range", 50, 2000, CFG.Range, 0, function(v)
+        CFG.Range = v
+    end)
+    makeSlider(content, "Prediction amt", 0, 0.3, CFG.Prediction, 2, function(v)
+        CFG.Prediction = v
+    end)
+
+    new("TextLabel", {
+        Size = UDim2.new(1, 0, 0, 14),
+        BackgroundTransparency = 1,
+        Text = "RightShift = show / hide",
+        TextColor3 = MUTED,
+        TextSize = 10,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Center,
+    }, content)
+
+    -- Paint helpers
+    local function paintPower()
+        power.Text = state.enabled and "ON" or "OFF"
+        tween(power, {
+            BackgroundColor3 = state.enabled and GREEN or ROW,
+        })
+    end
+
+    local lastStatus = ""
+    ui.paintStatus = function()
+        local name = "searching..."
+        if not state.enabled then
+            name = "disabled"
+        elseif state.aimModel then
+            name = "target: " .. tostring(state.aimModel.Name)
+        end
+
+        local mode = "none"
+        if CFG.AimPlayers and CFG.AimNPCs then mode = "players + npcs"
+        elseif CFG.AimPlayers then mode = "players"
+        elseif CFG.AimNPCs then mode = "npcs" end
+
+        local txt = name .. "  ·  " .. mode
+        if txt ~= lastStatus then
+            lastStatus = txt
+            status.Text = txt
+        end
+    end
+
+    setEnabled = function(v)
+        state.enabled = v
+        if not v then
+            state.aimPos, state.aimModel = nil, nil
+        end
+        paintPower()
+        ui.paintStatus()
+    end
+
+    power.MouseButton1Click:Connect(function()
+        setEnabled(not state.enabled)
+    end)
+
+    minBtn.MouseButton1Click:Connect(function()
+        local minimized = root.Size.Y.Offset > 100
+        root.Size = minimized and UDim2.fromOffset(272, 46) or UDim2.fromOffset(272, 356)
+        content.Visible = not minimized
+        minBtn.Text = minimized and "+" or "-"
+    end)
+
+    -- Header dragging
+    local dragging, dragStart, startPos = false, nil, nil
+
+    header.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = root.Position
+        end
+    end)
+
+    header.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+            and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        local d = input.Position - dragStart
+        root.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + d.X,
+            startPos.Y.Scale, startPos.Y.Offset + d.Y
+        )
+    end)
+
+    state.root = root
+    state.status = status
+    ui.root = root
+
+    -- Refresh after mode/settings exist
+    setEnabled(state.enabled)
+    ui.paintStatus()
+end
+
+if LP:FindFirstChild("PlayerGui") then
+    makeGui()
+else
+    LP:WaitForChild("PlayerGui", 10)
+    makeGui()
+end
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        activeSlider = nil
+    end
+end)
+
+UIS.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == CFG.ToggleKey and ui.root then
+        ui.root.Visible = not ui.root.Visible
+    end
+end)
+
+-- =========================
+-- Runtime
+-- =========================
+installHook()
+
+RunService.RenderStepped:Connect(function()
+    updateTarget()
+    updateHighlight()
+    if ui.paintStatus then ui.paintStatus() end
+
+    if mouseData and state.enabled and state.aimPos then
+        pcall(function()
+            mouseData.Hit = CFrame.new(state.aimPos)
+            mouseData.Target = nil
+        end)
+    end
+end)
+
+local API = {
+    state = state,
+    config = CFG,
+    setEnabled = function(v) if setEnabled then setEnabled(v) end end,
+    toggleUI = function()
+        if state.root then state.root.Visible = not state.root.Visible end
+    end,
+}
+
+-- Expose for toggling from the executor console (never fatal if readonly).
+local exposed = false
+if type(getgenv) == "function" then
+    exposed = (pcall(function() getgenv().SmallSilentAim = API end))
+end
+if not exposed then
+    pcall(function() _G.SmallSilentAim = API end)
+end
