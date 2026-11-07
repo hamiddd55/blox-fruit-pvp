@@ -1,0 +1,317 @@
+--[[
+    Small Silent Aim (standalone, no remote loadstring, no key/license)
+    Based on silentaimmodule.lua and stripped down.
+
+    How it works:
+      * Picks the closest player / NPC in range every frame (RenderStepped).
+      * Optionally predicts movement.
+      * Rewrites the first Vector3 argument of RemoteEvent:FireServer /
+        RemoteFunction:InvokeServer through a __namecall hook.
+      * Optionally spoofs the game's Mouse module (ReplicatedStorage.Mouse).
+      * Drag the on-screen button or press RightShift to toggle.
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("ReplicatedStorage")
+
+local LP = Players.LocalPlayer
+
+-- =========================
+-- Config
+-- =========================
+local CFG = {
+    Enabled = true,
+    Range = 500,
+    Prediction = 0.12,
+    AimPlayers = true,
+    AimNPCs = true,
+    NPCFolder = "Enemies",
+    TeamCheck = true,        -- false if the game allows team killing
+    Highlight = false,
+    MouseSpoof = true,
+    ToggleKey = Enum.KeyCode.RightShift,
+    IgnoreRemotes = {},      -- e.g. { Move = true, Ping = true }
+}
+
+local state = {
+    enabled = CFG.Enabled,
+    aimPos = nil,
+    aimModel = nil,
+    highlight = nil,
+}
+
+-- =========================
+-- Target selection
+-- =========================
+local function hrpOf(model)
+    return model and model:FindFirstChild("HumanoidRootPart")
+end
+
+local function isEnemyPlayer(pl)
+    if pl == LP or not pl.Character then return false end
+    if CFG.TeamCheck and pl.Team and LP.Team and pl.Team == LP.Team then
+        return false
+    end
+    return true
+end
+
+local function predict(hrp)
+    local v = hrp.AssemblyLinearVelocity or hrp.Velocity
+    if not v or v.Magnitude < 5 then
+        return hrp.Position
+    end
+    return hrp.Position + v * CFG.Prediction
+end
+
+local function candidate(model, myPos)
+    if not model then return nil end
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    local hrp = hrpOf(model)
+    if not (hum and hum.Health > 0 and hrp) then return nil end
+    local pos = predict(hrp)
+    local dist = (pos - myPos).Magnitude
+    if dist > CFG.Range then return nil end
+    return { model = model, pos = pos, dist = dist }
+end
+
+local function updateTarget()
+    state.aimPos, state.aimModel = nil, nil
+    if not state.enabled then return end
+
+    local char = LP.Character
+    local myHrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not myHrp then return end
+    local myPos = myHrp.Position
+
+    local best = nil
+
+    if CFG.AimPlayers then
+        for _, pl in ipairs(Players:GetPlayers()) do
+            if isEnemyPlayer(pl) then
+                local c = candidate(pl.Character, myPos)
+                if c and (not best or c.dist < best.dist) then best = c end
+            end
+        end
+    end
+
+    if CFG.AimNPCs then
+        local folder = workspace:FindFirstChild(CFG.NPCFolder)
+        if folder then
+            for _, npc in ipairs(folder:GetChildren()) do
+                if npc:IsA("Model") then
+                    local c = candidate(npc, myPos)
+                    if c and (not best or c.dist < best.dist) then best = c end
+                end
+            end
+        end
+    end
+
+    if best then
+        state.aimPos = best.pos
+        state.aimModel = best.model
+    end
+end
+
+-- =========================
+-- Optional highlight
+-- =========================
+local function updateHighlight()
+    if not CFG.Highlight then return end
+    local hl = state.highlight
+
+    if hl and (not state.aimModel or hl.Adornee ~= state.aimModel) then
+        hl:Destroy()
+        state.highlight, hl = nil, nil
+    end
+
+    if not hl and state.aimModel then
+        hl = Instance.new("Highlight")
+        hl.FillColor = Color3.fromRGB(255, 60, 60)
+        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+        hl.FillTransparency = 0.5
+        hl.Adornee = state.aimModel
+        hl.Parent = state.aimModel
+        state.highlight = hl
+    end
+end
+
+-- =========================
+-- __namecall hook
+-- =========================
+local function installHook()
+    if type(hookmetamethod) ~= "function" or type(getrawmetatable) ~= "function" then
+        return false
+    end
+
+    local ok, mt = pcall(getrawmetatable, game)
+    if not ok or not mt then return false end
+
+    pcall(setreadonly, mt, false)
+    local old
+    old = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = (getnamecallmethod and getnamecallmethod()) or ""
+        method = string.lower(method)
+
+        if state.enabled and state.aimPos
+            and (method == "fireserver" or method == "invokeserver") then
+            local okName, name = pcall(function() return self.Name end)
+            if not okName or not CFG.IgnoreRemotes[name] then
+                local cls = nil
+                pcall(function() cls = self.ClassName end)
+                if cls == "RemoteEvent" or cls == "RemoteFunction"
+                    or cls == "UnreliableRemoteEvent" then
+                    local args = { ... }
+                    for i = 1, math.min(#args, 3) do
+                        if typeof(args[i]) == "Vector3" then
+                            args[i] = state.aimPos
+                            return old(self, table.unpack(args))
+                        end
+                    end
+                end
+            end
+        end
+
+        return old(self, ...)
+    end)
+    pcall(setreadonly, mt, true)
+    return true
+end
+
+-- =========================
+-- Mouse module spoof (game specific, safe if missing)
+-- =========================
+local mouseData = nil
+if CFG.MouseSpoof then
+    local m = RS:FindFirstChild("Mouse")
+    if m and m:IsA("ModuleScript") then
+        local ok, res = pcall(require, m)
+        if ok and type(res) == "table" then
+            mouseData = res
+        end
+    end
+end
+
+-- =========================
+-- Toggle button
+-- =========================
+local setEnabled
+
+local function makeGui()
+    local pg = LP:FindFirstChild("PlayerGui")
+    if not pg then return end
+
+    local old = pg:FindFirstChild("SmallSilentAim")
+    if old then old:Destroy() end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "SmallSilentAim"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.Parent = pg
+
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.fromOffset(130, 34)
+    btn.Position = UDim2.new(0, 20, 0, 120)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 160, 70)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextScaled = true
+    btn.BorderSizePixel = 0
+    btn.Text = "SILENT AIM: ON"
+    btn.Parent = gui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = btn
+
+    setEnabled = function(v)
+        state.enabled = v
+        if not v then
+            state.aimPos, state.aimModel = nil, nil
+        end
+        btn.Text = "SILENT AIM: " .. (v and "ON" or "OFF")
+        btn.BackgroundColor3 = v and Color3.fromRGB(30, 160, 70)
+            or Color3.fromRGB(40, 40, 44)
+    end
+    setEnabled(state.enabled)
+
+    btn.MouseButton1Click:Connect(function()
+        setEnabled(not state.enabled)
+    end)
+
+    local dragging, dragStart, startPos = false, nil, nil
+
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = btn.Position
+        end
+    end)
+
+    btn.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+            and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        local d = input.Position - dragStart
+        btn.Position = UDim2.new(
+            0, startPos.X.Offset + d.X,
+            0, startPos.Y.Offset + d.Y
+        )
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+if LP:FindFirstChild("PlayerGui") then
+    makeGui()
+else
+    LP:WaitForChild("PlayerGui", 10)
+    makeGui()
+end
+
+UIS.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == CFG.ToggleKey and setEnabled then
+        setEnabled(not state.enabled)
+    end
+end)
+
+-- =========================
+-- Runtime
+-- =========================
+installHook()
+
+RunService.RenderStepped:Connect(function()
+    updateTarget()
+    updateHighlight()
+
+    if mouseData and state.enabled and state.aimPos then
+        pcall(function()
+            mouseData.Hit = CFrame.new(state.aimPos)
+            mouseData.Target = nil
+        end)
+    end
+end)
+
+local API = {
+    state = state,
+    setEnabled = function(v) if setEnabled then setEnabled(v) end end,
+    config = CFG,
+}
+
+-- Expose for toggling from the executor console (never fatal if readonly).
+local exposed = false
+if type(getgenv) == "function" then
+    exposed = (pcall(function() getgenv().SmallSilentAim = API end))
+end
+if not exposed then
+    pcall(function() _G.SmallSilentAim = API end)
+end
